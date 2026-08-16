@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
 <title>Negócios Múltiplos — Influencer Partner OS</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<script src="https://unpkg.com/@babel/standalone@7/babel.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js" crossorigin="anonymous"></script>
 <style>
   html, body { margin: 0; padding: 0; background: #FBFAF7; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -13,7 +13,11 @@
 </style>
 </head>
 <body>
-<div id="root"></div>
+<div id="root">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:sans-serif;color:#6B7280;">
+    A carregar…
+  </div>
+</div>
 
 <script>
   // Compatibilidade: fora do Claude, window.storage não existe — usa localStorage no seu lugar.
@@ -37,6 +41,46 @@
       },
     };
   }
+</script>
+
+<script>
+  // DIAGNÓSTICO: mostra qualquer erro directamente no ecrã, em vez de ficar em branco.
+  window.__nmosErrors = [];
+  function __nmosShowError(msg) {
+    window.__nmosErrors.push(msg);
+    var root = document.getElementById("root");
+    if (!root) return;
+    if (!root.dataset.nmosErrorBox) {
+      root.dataset.nmosErrorBox = "1";
+      root.innerHTML = '<div style="padding:20px;font-family:sans-serif;background:#FBEAE3;color:#7A1F0A;white-space:pre-wrap;line-height:1.5;font-size:14px;"><b>Erro ao carregar a app — mostra isto ao Claude:</b><br><br><div id="nmos-error-list"></div></div>';
+    }
+    var list = document.getElementById("nmos-error-list");
+    if (list) {
+      var line = document.createElement("div");
+      line.style.marginBottom = "10px";
+      line.style.paddingBottom = "10px";
+      line.style.borderBottom = "1px solid #e8c4b8";
+      line.textContent = msg;
+      list.appendChild(line);
+    }
+  }
+  window.addEventListener("error", function (e) {
+    var msg = e.message || "Script error.";
+    if (e.filename) msg += "\n  em: " + e.filename + (e.lineno ? (":" + e.lineno) : "");
+    __nmosShowError(msg);
+  });
+  window.addEventListener("unhandledrejection", function (e) {
+    var reason = e.reason;
+    var msg = (reason && (reason.stack || reason.message)) ? (reason.message || String(reason)) : String(reason);
+    __nmosShowError("Promise rejeitada: " + msg);
+  });
+  // Se ao fim de 10s nada tiver renderizado nem erro nenhum aparecido, avisa também.
+  setTimeout(function () {
+    var root = document.getElementById("root");
+    if (root && !root.dataset.nmosErrorBox && root.textContent.indexOf("A carregar") !== -1) {
+      __nmosShowError("Nada carregou em 10 segundos e não foi apanhado nenhum erro de JavaScript. Provável causa: um dos scripts externos (unpkg.com ou esm.sh) não conseguiu carregar nesta rede — tenta trocar de WiFi para dados móveis (ou vice-versa) e recarregar.");
+    }
+  }, 10000);
 </script>
 
 <script type="text/babel" data-type="module" data-presets="react">
@@ -1936,41 +1980,4 @@ function emptyClient() {
   return { nome: "", telefone: "", influencerId: "", campaignId: "", produtoAdquirido: "12 Formas de Gerar Rendimentos em Angola", dataCompra: todayISO(), valor: "", estado: "Activo", diaAcompanhamento: 0, observacoes: "" };
 }
 
-function ClientForm({ data, db, onCancel, onSave }) {
-  const [form, setForm] = useState(data);
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
-  return (
-    <form onSubmit={(e) => { e.preventDefault(); onSave({ ...form, valor: Number(form.valor) || 0, diaAcompanhamento: Number(form.diaAcompanhamento) || 0 }); }}>
-      <Field label="Nome"><TextInput required value={form.nome} onChange={set("nome")} /></Field>
-      <Field label="Telefone"><TextInput required value={form.telefone} onChange={set("telefone")} /></Field>
-      <Field label="Influencer de origem">
-        <Select value={form.influencerId} onChange={set("influencerId")}>
-          <option value="">—</option>
-          {db.influencers.map((i) => <option key={i.id} value={i.id}>{i.nomeArtistico || i.nome}</option>)}
-        </Select>
-      </Field>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Valor pago (Kz)"><TextInput type="number" value={form.valor} onChange={set("valor")} /></Field>
-        <Field label="Data da compra"><TextInput type="date" value={form.dataCompra} onChange={set("dataCompra")} /></Field>
-      </div>
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Estado">
-          <Select value={form.estado} onChange={set("estado")}>
-            {CLI_ESTADOS.map((s) => <option key={s}>{s}</option>)}
-          </Select>
-        </Field>
-        <Field label="Dia do acompanhamento (0-30)"><TextInput type="number" min="0" max="30" value={form.diaAcompanhamento} onChange={set("diaAcompanhamento")} /></Field>
-      </div>
-      <Field label="Observações"><TextArea rows={3} value={form.observacoes} onChange={set("observacoes")} /></Field>
-      <div className="flex gap-2 mt-2">
-        <GhostButton onClick={onCancel} full>Cancelar</GhostButton>
-        <PrimaryButton type="submit" full icon={Check}>Guardar</PrimaryButton>
-      </div>
-    </form>
-  );
-}
-
-/* ======================================================================
-   VENDAS  (auto-generates commissions)
-====================================================================== */
-const SALE_ESTADOS = ["Pendente", "Comprovativo recebido", "Em validação", "Valid
+function ClientForm({ data, db, onCancel, onSave 
