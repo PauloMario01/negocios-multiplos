@@ -1,0 +1,1984 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Negócios Múltiplos — Influencer Partner OS</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/@babel/standalone@7/babel.min.js" crossorigin="anonymous"></script>
+<style>
+  html, body { margin: 0; padding: 0; background: #FBFAF7; }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+</style>
+</head>
+<body>
+<div id="root">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;font-family:sans-serif;color:#6B7280;">
+    A carregar…
+  </div>
+</div>
+
+<script>
+  // Compatibilidade: fora do Claude, window.storage não existe — usa localStorage no seu lugar.
+  if (!window.storage) {
+    window.storage = {
+      get: async (key) => {
+        const v = localStorage.getItem(key);
+        return v !== null ? { key, value: v, shared: false } : null;
+      },
+      set: async (key, value) => {
+        localStorage.setItem(key, value);
+        return { key, value, shared: false };
+      },
+      delete: async (key) => {
+        localStorage.removeItem(key);
+        return { key, deleted: true, shared: false };
+      },
+      list: async (prefix) => {
+        const keys = Object.keys(localStorage).filter((k) => !prefix || k.startsWith(prefix));
+        return { keys, prefix, shared: false };
+      },
+    };
+  }
+</script>
+
+<script>
+  // DIAGNÓSTICO: mostra qualquer erro directamente no ecrã, em vez de ficar em branco.
+  window.__nmosErrors = [];
+  function __nmosShowError(msg) {
+    window.__nmosErrors.push(msg);
+    var root = document.getElementById("root");
+    if (!root) return;
+    if (!root.dataset.nmosErrorBox) {
+      root.dataset.nmosErrorBox = "1";
+      root.innerHTML = '<div style="padding:20px;font-family:sans-serif;background:#FBEAE3;color:#7A1F0A;white-space:pre-wrap;line-height:1.5;font-size:14px;"><b>Erro ao carregar a app — mostra isto ao Claude:</b><br><br><div id="nmos-error-list"></div></div>';
+    }
+    var list = document.getElementById("nmos-error-list");
+    if (list) {
+      var line = document.createElement("div");
+      line.style.marginBottom = "10px";
+      line.style.paddingBottom = "10px";
+      line.style.borderBottom = "1px solid #e8c4b8";
+      line.textContent = msg;
+      list.appendChild(line);
+    }
+  }
+  window.addEventListener("error", function (e) {
+    var msg = e.message || "Script error.";
+    if (e.filename) msg += "\n  em: " + e.filename + (e.lineno ? (":" + e.lineno) : "");
+    __nmosShowError(msg);
+  });
+  window.addEventListener("unhandledrejection", function (e) {
+    var reason = e.reason;
+    var msg = (reason && (reason.stack || reason.message)) ? (reason.message || String(reason)) : String(reason);
+    __nmosShowError("Promise rejeitada: " + msg);
+  });
+  // Se ao fim de 10s nada tiver renderizado nem erro nenhum aparecido, avisa também.
+  setTimeout(function () {
+    var root = document.getElementById("root");
+    if (root && !root.dataset.nmosErrorBox && root.textContent.indexOf("A carregar") !== -1) {
+      __nmosShowError("Nada carregou em 10 segundos e não foi apanhado nenhum erro de JavaScript. Provável causa: um dos scripts externos (unpkg.com ou esm.sh) não conseguiu carregar nesta rede — tenta trocar de WiFi para dados móveis (ou vice-versa) e recarregar.");
+    }
+  }, 10000);
+</script>
+
+<script type="text/babel" data-type="module" data-presets="react">
+import React, { useState, useEffect, useMemo, useCallback } from "https://esm.sh/react@18.3.1";
+import ReactDOM from "https://esm.sh/react-dom@18.3.1/client";
+import {
+  Home, Users, Target, UserCheck, Wallet, Megaphone, KeyRound, Menu, X,
+  Search, Plus, Phone, MessageCircle, Mail, Copy, Trash2, Archive, Pencil,
+  ChevronRight, ChevronDown, Check, RefreshCw, Filter, TrendingUp, Coins,
+  ShieldCheck, Eye, EyeOff, ArrowLeft, CircleDollarSign, Sparkles,
+  Radar, Stethoscope, Landmark, FileText, Trophy, Rocket, Star, FolderOpen,
+  ListChecks, BarChart3, Bell, History, UserCircle, Settings, QrCode,
+  ExternalLink, Download, ThumbsUp, Clock, AlertTriangle, CalendarClock,
+  ClipboardCheck, Lock, Globe2
+} from "https://esm.sh/lucide-react@0.383.0?deps=react@18.3.1";
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
+} from "https://esm.sh/recharts@2.12.7?deps=react@18.3.1,react-dom@18.3.1";
+
+
+/* ======================================================================
+   FONTS — injected once
+====================================================================== */
+function useBrandFonts() {
+  useEffect(() => {
+    if (document.getElementById("nmos-fonts")) return;
+    const link = document.createElement("link");
+    link.id = "nmos-fonts";
+    link.rel = "stylesheet";
+    link.href =
+      "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700;800&display=swap";
+    document.head.appendChild(link);
+  }, []);
+}
+
+/* ======================================================================
+   BRAND TOKENS
+====================================================================== */
+const C = {
+  green: "#0F3D2E",
+  greenDeep: "#0A2C21",
+  greenTint: "#E7F1EC",
+  gold: "#C9A227",
+  goldSoft: "#E7D9A8",
+  ink: "#14181A",
+  paper: "#FBFAF7",
+  card: "#FFFFFF",
+  line: "#E7E4DC",
+  muted: "#6B7280",
+  red: "#B3492B",
+  redTint: "#F7E9E4",
+};
+
+const fontDisplay = { fontFamily: "'Fraunces', serif" };
+const fontBody = { fontFamily: "'Inter', sans-serif" };
+
+/* ======================================================================
+   STORAGE KEY + HELPERS
+====================================================================== */
+const STORE_KEY = "nmos-core-v1";
+
+/* ======================================================================
+   SUPABASE — ligação real à base de dados
+   Tabelas "core" (influencers, campanhas, leads, clientes, vendas,
+   comissões) vivem no Supabase. Os restantes módulos continuam nesta
+   fase a usar armazenamento local do dispositivo, e serão migrados
+   a seguir.
+====================================================================== */
+const SUPABASE_URL = "https://xygtolzputrwtadjuvvh.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5Z3RvbHpwdXRyd3RhZGp1dnZoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY4MjIzNDMsImV4cCI6MjEwMjM5ODM0M30.kfdjkdJ1RK80BK2mzFV_c403tgZ6MZAGjx3qxT8E5-Q";
+
+async function sbFetch(path, { method = "GET", body, accessToken, prefer } = {}) {
+  const res = await fetch(`${SUPABASE_URL}${path}`, {
+    method,
+    headers: {
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${accessToken || SUPABASE_ANON_KEY}`,
+      "Content-Type": "application/json",
+      ...(prefer ? { Prefer: prefer } : {}),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  });
+  if (!res.ok) {
+    let msg = `${res.status}`;
+    try { const j = await res.json(); msg = j.message || j.msg || msg; } catch (e) {}
+    throw new Error(msg);
+  }
+  if (res.status === 204) return null;
+  const text = await res.text();
+  return text ? JSON.parse(text) : null;
+}
+
+async function sbLogin(email, password) {
+  const data = await sbFetch(`/auth/v1/token?grant_type=password`, {
+    method: "POST",
+    body: { email, password },
+  });
+  return data; // { access_token, refresh_token, user: {...} }
+}
+
+// CRUD genérico para uma tabela Supabase
+function sbTable(name, accessToken) {
+  return {
+    list: () => sbFetch(`/rest/v1/${name}?select=*&order=created_at.desc`, { accessToken }),
+    insert: (row) => sbFetch(`/rest/v1/${name}`, { method: "POST", body: row, accessToken, prefer: "return=representation" }).then((r) => r[0]),
+    update: (id, patch) => sbFetch(`/rest/v1/${name}?id=eq.${id}`, { method: "PATCH", body: patch, accessToken, prefer: "return=representation" }).then((r) => r[0]),
+    remove: (id) => sbFetch(`/rest/v1/${name}?id=eq.${id}`, { method: "DELETE", accessToken }),
+  };
+}
+
+// Conversores entre o formato usado na app (camelCase) e as colunas reais (snake_case)
+const mapOut = {
+  influencer: (i) => ({
+    nome: i.nome, nome_artistico: i.nomeArtistico, username: i.username, plataforma: i.plataforma,
+    telefone: i.telefone, whatsapp: i.whatsapp, email: i.email, cidade: i.cidade, pais: i.pais,
+    nicho: i.nicho, seguidores: Number(i.seguidores) || 0, engagement: i.engagement, estado: i.estado,
+    data_entrada: i.dataEntrada || null, codigo: i.codigo, codigo_activo: i.codigoAtivo,
+    meta_vendas: i.metaVendas ? Number(i.metaVendas) : null, observacoes: i.observacoes,
+    proxima_accao: i.proximaAcao, data_proximo_contacto: i.dataProximoContacto || null,
+    ultimo_contacto: i.ultimoContacto || null, canal: i.canal,
+  }),
+  campaign: (c) => ({
+    nome: c.nome, codigo_interno: c.codigoInterno, produto: c.produto,
+    preco_oficial: Number(c.precoOficial) || 0, preco_promo: Number(c.precoPromo) || 0,
+    comissao_pct: Number(c.comissaoPct) || 0, data_inicio: c.dataInicio || null, data_fim: c.dataFim || null,
+    estado: c.estado, descricao: c.descricao,
+  }),
+  lead: (l) => ({
+    nome: l.nome, telefone: l.telefone, influencer_id: l.influencerId || null, campaign_id: l.campaignId || null,
+    estado: l.estado, data_entrada: l.dataEntrada || null, observacoes: l.observacoes,
+  }),
+  client: (c) => ({
+    nome: c.nome, telefone: c.telefone, influencer_id: c.influencerId || null, campaign_id: c.campaignId || null,
+    produto_adquirido: c.produtoAdquirido, data_compra: c.dataCompra || null, valor: Number(c.valor) || 0,
+    estado: c.estado, dia_acompanhamento: Number(c.diaAcompanhamento) || 0, observacoes: c.observacoes,
+  }),
+  sale: (s) => ({
+    client_id: s.clientId || null, influencer_id: s.influencerId || null, campaign_id: s.campaignId || null,
+    preco: Number(s.preco) || 0, comissao_pct: Number(s.comissaoPct) || 0, data: s.data || null,
+    metodo_pagamento: s.metodoPagamento, referencia: s.referencia, estado: s.estado, observacoes: s.observacoes,
+  }),
+};
+
+const mapIn = {
+  influencer: (r) => ({
+    id: r.id, nome: r.nome, nomeArtistico: r.nome_artistico, username: r.username, plataforma: r.plataforma,
+    telefone: r.telefone, whatsapp: r.whatsapp, email: r.email, cidade: r.cidade, pais: r.pais, nicho: r.nicho,
+    seguidores: r.seguidores, engagement: r.engagement, estado: r.estado, dataEntrada: r.data_entrada,
+    codigo: r.codigo, codigoAtivo: r.codigo_activo, metaVendas: r.meta_vendas, observacoes: r.observacoes,
+    proximaAcao: r.proxima_accao, dataProximoContacto: r.data_proximo_contacto, ultimoContacto: r.ultimo_contacto,
+    canal: r.canal, demo: false,
+  }),
+  campaign: (r) => ({
+    id: r.id, nome: r.nome, codigoInterno: r.codigo_interno, produto: r.produto,
+    precoOficial: Number(r.preco_oficial), precoPromo: Number(r.preco_promo), comissaoPct: Number(r.comissao_pct),
+    dataInicio: r.data_inicio, dataFim: r.data_fim, estado: r.estado, descricao: r.descricao,
+  }),
+  lead: (r) => ({
+    id: r.id, nome: r.nome, telefone: r.telefone, influencerId: r.influencer_id, campaignId: r.campaign_id,
+    estado: r.estado, dataEntrada: r.data_entrada, observacoes: r.observacoes,
+  }),
+  client: (r) => ({
+    id: r.id, nome: r.nome, telefone: r.telefone, influencerId: r.influencer_id, campaignId: r.campaign_id,
+    produtoAdquirido: r.produto_adquirido, dataCompra: r.data_compra, valor: Number(r.valor),
+    estado: r.estado, diaAcompanhamento: r.dia_acompanhamento, observacoes: r.observacoes,
+  }),
+  sale: (r) => ({
+    id: r.id, clientId: r.client_id, influencerId: r.influencer_id, campaignId: r.campaign_id,
+    preco: Number(r.preco), comissaoPct: Number(r.comissao_pct), data: r.data, metodoPagamento: r.metodo_pagamento,
+    referencia: r.referencia, estado: r.estado, observacoes: r.observacoes,
+  }),
+  commission: (r) => ({
+    id: r.id, saleId: r.sale_id, influencerId: r.influencer_id, valor: Number(r.valor), estado: r.estado, historico: [],
+  }),
+  script: (r) => ({
+    id: r.id, titulo: r.titulo, categoria: r.categoria, objectivo: r.objectivo, plataforma: r.plataforma,
+    publico: r.publico, idioma: r.idioma, variante: r.variante, texto: r.texto, cta: r.cta,
+    variaveis: r.variaveis, notas: r.notas, estado: r.estado, dataCriacao: r.created_at,
+  }),
+  diagnostic: (r) => ({
+    id: r.id, leadId: r.lead_id, influencerId: r.influencer_id, data: r.data,
+    respostas: r.respostas || {}, perfilRecomendado: r.perfil_recomendado, estruturasRecomendadas: r.estruturas_recomendadas || [],
+  }),
+  whatsapp: (r) => ({
+    id: r.id, groupName: r.group_name, groupLink: r.group_link, description: r.description,
+    pinnedMessage: r.pinned_message, rules: r.rules, scriptWelcome: r.script_welcome,
+    scriptRequestCode: r.script_request_code, scriptConfirmation: r.script_confirmation,
+    scriptFollowup: r.script_followup, scriptSocialProof: r.script_social_proof,
+  }),
+  vip: (r) => ({
+    id: r.id, nome: r.nome, whatsapp: r.whatsapp, influencerId: r.influencer_id, dataEntrada: r.data_entrada,
+    dataExpiracao: r.data_expiracao, estado: r.estado, observacoes: r.observacoes,
+  }),
+  document: (r) => ({
+    id: r.id, titulo: r.titulo, categoria: r.categoria, link: r.file_path, nota: r.nota, dataUpload: r.data_upload,
+  }),
+  task: (r) => ({
+    id: r.id, titulo: r.titulo, descricao: r.descricao, responsavel: r.responsavel, prioridade: r.prioridade,
+    prazo: r.prazo, estado: r.estado, entidade: r.entidade_id || "",
+  }),
+  payment: (r) => ({
+    id: r.id, influencerId: r.influencer_id, valor: Number(r.valor), periodo: r.periodo, metodo: r.metodo,
+    conta: r.conta, data: r.data, referencia: r.referencia, estado: r.estado, observacoes: r.observacoes,
+    commissionIds: [],
+  }),
+  settings: (r) => ({
+    companyName: r.company_name, logoText: r.logo_text, whatsappOficial: r.whatsapp_oficial, email: r.email,
+    moeda: r.moeda, duracaoAcompanhamento: r.duracao_acompanhamento, mensagemPadrao: r.mensagem_padrao,
+  }),
+  banking: (r) => ({ titular: r?.titular || "", banco: r?.banco || "", iban: r?.iban || "" }),
+};
+
+mapOut.script = (s) => ({
+  titulo: s.titulo, categoria: s.categoria, objectivo: s.objectivo, plataforma: s.plataforma, publico: s.publico,
+  idioma: s.idioma, variante: s.variante, texto: s.texto, cta: s.cta, variaveis: s.variaveis, notas: s.notas, estado: s.estado,
+});
+mapOut.diagnostic = (d) => ({
+  lead_id: d.leadId || null, influencer_id: d.influencerId || null, data: d.data || null,
+  respostas: d.respostas || {}, perfil_recomendado: d.perfilRecomendado, estruturas_recomendadas: d.estruturasRecomendadas || [],
+});
+mapOut.whatsapp = (w) => ({
+  group_name: w.groupName, group_link: w.groupLink, description: w.description, pinned_message: w.pinnedMessage,
+  rules: w.rules, script_welcome: w.scriptWelcome, script_request_code: w.scriptRequestCode,
+  script_confirmation: w.scriptConfirmation, script_followup: w.scriptFollowup, script_social_proof: w.scriptSocialProof,
+});
+mapOut.vip = (v) => ({
+  nome: v.nome, whatsapp: v.whatsapp, influencer_id: v.influencerId || null,
+  data_entrada: v.dataEntrada || null, data_expiracao: v.dataExpiracao || null, estado: v.estado, observacoes: v.observacoes,
+});
+mapOut.document = (d) => ({ titulo: d.titulo, categoria: d.categoria, file_path: d.link, nota: d.nota });
+mapOut.task = (t, userId) => ({
+  titulo: t.titulo, descricao: t.descricao, responsavel: userId || null, prioridade: t.prioridade, prazo: t.prazo || null, estado: t.estado,
+});
+mapOut.payment = (p) => ({
+  influencer_id: p.influencerId || null, valor: Number(p.valor) || 0, periodo: p.periodo, metodo: p.metodo,
+  conta: p.conta, data: p.data || null, referencia: p.referencia, estado: p.estado, observacoes: p.observacoes,
+});
+mapOut.settings = (s) => ({
+  id: true, company_name: s.companyName, logo_text: s.logoText, whatsapp_oficial: s.whatsappOficial, email: s.email,
+  moeda: s.moeda, duracao_acompanhamento: Number(s.duracaoAcompanhamento) || 30, mensagem_padrao: s.mensagemPadrao,
+});
+mapOut.banking = (b) => ({ titular: b.titular, banco: b.banco, iban: b.iban });
+
+// Dados bancários vivem numa tabela própria (influencer_banking) — carregados/gravados à parte,
+// nunca em bloco com o resto dos influencers.
+function bankingApi(accessToken) {
+  return {
+    get: (influencerId) => sbFetch(`/rest/v1/influencer_banking?influencer_id=eq.${influencerId}&select=*`, { accessToken }).then((r) => mapIn.banking(r?.[0])),
+    upsert: (influencerId, data) =>
+      sbFetch(`/rest/v1/influencer_banking`, {
+        method: "POST",
+        body: { influencer_id: influencerId, ...mapOut.banking(data) },
+        accessToken,
+        prefer: "resolution=merge-duplicates,return=representation",
+      }).then((r) => mapIn.banking(r?.[0])),
+  };
+}
+
+function genId(prefix, seqRef) {
+  seqRef.current += 1;
+  return `${prefix}${String(seqRef.current).padStart(4, "0")}`;
+}
+
+function formatKz(n) {
+  const v = Number(n) || 0;
+  return v.toLocaleString("pt-PT", { maximumFractionDigits: 0 }) + " Kz";
+}
+
+function todayISO() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function daysAgo(n) {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d.toISOString().slice(0, 10);
+}
+
+function pushAudit(setDb, seqRef, { utilizador = "Admin", accao, entidade, entidadeId }) {
+  seqRef.current.AUD = (seqRef.current.AUD || 0) + 1;
+  const id = `AUD${String(seqRef.current.AUD).padStart(4, "0")}`;
+  setDb((prev) => ({
+    ...prev,
+    seq: { ...prev.seq, AUD: seqRef.current.AUD },
+    auditLogs: [{ id, data: new Date().toISOString(), utilizador, accao, entidade, entidadeId }, ...(prev.auditLogs || [])],
+  }));
+}
+
+function randCode(name) {
+  const base = (name || "PARC").replace(/[^A-Za-z]/g, "").slice(0, 6).toUpperCase() || "PARC";
+  return base + Math.floor(10 + Math.random() * 90);
+}
+
+/* ======================================================================
+   DEMO SEED DATA
+====================================================================== */
+function seedData() {
+  const campaigns = [
+    {
+      id: "CMP0001",
+      nome: "MAPA 9900",
+      codigoInterno: "MAPA9900",
+      produto: "12 Formas de Gerar Rendimentos em Angola",
+      precoOficial: 19800,
+      precoPromo: 9900,
+      comissaoPct: 50,
+      dataInicio: daysAgo(40),
+      dataFim: "",
+      estado: "Activa",
+      descricao: "Campanha principal de lançamento do manual através de parceiros influencers.",
+      demo: true,
+    },
+  ];
+
+  const influencers = [
+    {
+      id: "INF0001", nome: "Joana Manuel", nomeArtistico: "Joana MZ", username: "@joanamz",
+      plataforma: "Instagram", telefone: "+244 923 000 111", whatsapp: "+244 923 000 111",
+      email: "joana@example.com", cidade: "Luanda", pais: "Angola", nicho: "Empreendedorismo",
+      seguidores: 18500, engagement: "4.2%", estado: "Activo", dataEntrada: daysAgo(35),
+      codigo: "JOANA50", codigoAtivo: true, metaVendas: 20, observacoes: "Muito responsiva, boa audiência jovem.",
+      demo: true,
+    },
+    {
+      id: "INF0002", nome: "Carlos Sapalo", nomeArtistico: "Carlos S.", username: "@carlossapalo",
+      plataforma: "TikTok", telefone: "+244 924 111 222", whatsapp: "+244 924 111 222",
+      email: "carlos@example.com", cidade: "Benguela", pais: "Angola", nicho: "Finanças pessoais",
+      seguidores: 42000, engagement: "6.1%", estado: "Activo", dataEntrada: daysAgo(20),
+      codigo: "CARLOS50", codigoAtivo: true, metaVendas: 30, observacoes: "",
+      demo: true,
+    },
+    {
+      id: "INF0003", nome: "Rosa Kiala", nomeArtistico: "Rosa K", username: "@rosakiala",
+      plataforma: "Facebook", telefone: "+244 925 222 333", whatsapp: "+244 925 222 333",
+      email: "rosa@example.com", cidade: "Huambo", pais: "Angola", nicho: "Lifestyle",
+      seguidores: 9800, engagement: "3.5%", estado: "Onboarding", dataEntrada: daysAgo(5),
+      codigo: "ROSA50", codigoAtivo: true, metaVendas: 10, observacoes: "Recém aprovada, aguarda materiais.",
+      demo: true,
+    },
+  ];
+
+  const leads = [
+    { id: "LD0001", nome: "Miguel Sousa", telefone: "+244 926 000 001", influencerId: "INF0001", campaignId: "CMP0001", estado: "Novo", dataEntrada: daysAgo(1), observacoes: "", demo: true },
+    { id: "LD0002", nome: "Ana Paula", telefone: "+244 926 000 002", influencerId: "INF0001", campaignId: "CMP0001", estado: "Diagnóstico", dataEntrada: daysAgo(2), observacoes: "", demo: true },
+    { id: "LD0003", nome: "Duarte Neto", telefone: "+244 926 000 003", influencerId: "INF0002", campaignId: "CMP0001", estado: "Pago", dataEntrada: daysAgo(6), observacoes: "", demo: true },
+    { id: "LD0004", nome: "Isabel Chivinda", telefone: "+244 926 000 004", influencerId: "INF0002", campaignId: "CMP0001", estado: "Convertido", dataEntrada: daysAgo(9), observacoes: "", demo: true },
+    { id: "LD0005", nome: "Pedro Alfredo", telefone: "+244 926 000 005", influencerId: "INF0003", campaignId: "CMP0001", estado: "Interessado", dataEntrada: daysAgo(3), observacoes: "", demo: true },
+  ];
+
+  const clients = [
+    { id: "CLI0001", nome: "Duarte Neto", telefone: "+244 926 000 003", influencerId: "INF0002", campaignId: "CMP0001", produtoAdquirido: "12 Formas de Gerar Rendimentos em Angola", dataCompra: daysAgo(6), valor: 9900, estado: "Em acompanhamento", diaAcompanhamento: 6, observacoes: "", demo: true },
+    { id: "CLI0002", nome: "Isabel Chivinda", telefone: "+244 926 000 004", influencerId: "INF0002", campaignId: "CMP0001", produtoAdquirido: "12 Formas de Gerar Rendimentos em Angola", dataCompra: daysAgo(9), valor: 9900, estado: "Em acompanhamento", diaAcompanhamento: 9, observacoes: "", demo: true },
+    { id: "CLI0003", nome: "Fernanda Bento", telefone: "+244 926 000 006", influencerId: "INF0001", campaignId: "CMP0001", produtoAdquirido: "12 Formas de Gerar Rendimentos em Angola", dataCompra: daysAgo(18), valor: 9900, estado: "Concluído", diaAcompanhamento: 30, observacoes: "", demo: true },
+  ];
+
+  const sales = [
+    { id: "VD0001", clientId: "CLI0001", influencerId: "INF0002", campaignId: "CMP0001", preco: 9900, comissaoPct: 50, data: daysAgo(6), metodoPagamento: "Transferência", referencia: "REF-0091", estado: "Validada", demo: true },
+    { id: "VD0002", clientId: "CLI0002", influencerId: "INF0002", campaignId: "CMP0001", preco: 9900, comissaoPct: 50, data: daysAgo(9), metodoPagamento: "Multicaixa Express", referencia: "REF-0088", estado: "Validada", demo: true },
+    { id: "VD0003", clientId: "CLI0003", influencerId: "INF0001", campaignId: "CMP0001", preco: 9900, comissaoPct: 50, data: daysAgo(18), metodoPagamento: "Transferência", referencia: "REF-0075", estado: "Validada", demo: true },
+    { id: "VD0004", clientId: null, influencerId: "INF0001", campaignId: "CMP0001", preco: 9900, comissaoPct: 50, data: daysAgo(1), metodoPagamento: "Transferência", referencia: "REF-0102", estado: "Em validação", observacoes: "Aguarda confirmação do comprovativo.", demo: true },
+    { id: "VD0005", clientId: null, influencerId: "INF0003", campaignId: "CMP0001", preco: 9900, comissaoPct: 50, data: daysAgo(0), metodoPagamento: "Transferência", referencia: "", estado: "Pendente", observacoes: "", demo: true },
+  ];
+
+  const commissions = [
+    { id: "CM0001", saleId: "VD0001", influencerId: "INF0002", valor: 4950, estado: "Disponível", historico: [{ data: daysAgo(6), accao: "Gerada automaticamente ao validar venda VD0001" }], demo: true },
+    { id: "CM0002", saleId: "VD0002", influencerId: "INF0002", valor: 4950, estado: "Disponível", historico: [{ data: daysAgo(9), accao: "Gerada automaticamente ao validar venda VD0002" }], demo: true },
+    { id: "CM0003", saleId: "VD0003", influencerId: "INF0001", valor: 4950, estado: "Paga", historico: [{ data: daysAgo(18), accao: "Gerada automaticamente ao validar venda VD0003" }, { data: daysAgo(10), accao: "Marcada como paga pelo administrador" }], demo: true },
+  ];
+
+  const scripts = [
+    { id: "SC0001", titulo: "Primeiro contacto — Instagram DM", categoria: "Primeiro contacto", objectivo: "Iniciar conversa com potencial parceiro", plataforma: "Instagram", publico: "Influencers 5k-50k seguidores", idioma: "PT", variante: "curta", texto: "Olá {nome}! Vi o teu conteúdo sobre {tema} e adorei. Trabalho com um projecto de rendimento extra em Angola e procuro parceiros como tu. Posso explicar em 2 minutos?", cta: "Responder para saber mais", variaveis: "{nome}, {tema}", notas: "", estado: "Activo", dataCriacao: daysAgo(30), demo: true },
+    { id: "SC0002", titulo: "Objeção sobre comissão", categoria: "Objeção sobre comissão", objectivo: "Responder a dúvidas sobre a % de comissão", plataforma: "WhatsApp", publico: "Influencer em negociação", idioma: "PT", variante: "média", texto: "Percebo a tua questão. A comissão é 50% do valor pago pelo cliente — ou seja, por cada venda de 9.900 Kz recebes 4.950 Kz, pagos após validação. Não há tectos nem limites ao número de vendas.", cta: "Confirmar interesse em avançar", variaveis: "", notas: "", estado: "Activo", dataCriacao: daysAgo(28), demo: true },
+    { id: "SC0003", titulo: "Fecho da parceria", categoria: "Fecho da parceria", objectivo: "Formalizar entrada do influencer", plataforma: "WhatsApp", publico: "Influencer aprovado", idioma: "PT", variante: "curta", texto: "Perfeito, {nome}! Estás dentro. Vou enviar-te o teu código exclusivo e o Partner Kit com scripts e criativos ainda hoje.", cta: "Enviar código", variaveis: "{nome}", notas: "", estado: "Activo", dataCriacao: daysAgo(25), demo: true },
+    { id: "SC0004", titulo: "Cold outreach — Partnership proposal", categoria: "Email outreach", objectivo: "Abordagem internacional formal", plataforma: "Email", publico: "Creators internacionais", idioma: "EN", variante: "longa", texto: "Hi {nome}, I've been following your content on {tema} and think there's a strong fit for a performance-based partnership. We offer a 50% commission per validated sale, full creative support, and a dedicated tracking code. Would you be open to a short call this week?", cta: "Reply to schedule a call", variaveis: "{nome}, {tema}", notas: "Versão internacional", estado: "Activo", dataCriacao: daysAgo(20), demo: true },
+    { id: "SC0005", titulo: "Script de boas-vindas ao grupo", categoria: "Onboarding", objectivo: "Receber leads no grupo oficial", plataforma: "WhatsApp", publico: "Leads", idioma: "PT", variante: "curta", texto: "Bem-vindo(a) ao grupo oficial! Para te ajudarmos melhor, indica o código do influencer que te trouxe até aqui 🙌", cta: "Pedir código", variaveis: "", notas: "", estado: "Activo", dataCriacao: daysAgo(35), demo: true },
+  ];
+
+  const diagnostics = [
+    {
+      id: "DG0001", leadId: "LD0002", influencerId: "INF0001", data: daysAgo(2),
+      respostas: {
+        dificuldade: "Falta de capital inicial", tempoDisponivel: "2 horas/dia", temSmartphone: "Sim", temComputador: "Não",
+        competencia: "Vendas", preferencia: "Vender", capitalInicial: "Menos de 10.000 Kz", experiencia: "Comércio informal",
+        estruturaInteresse: "Vendas online", objectivo90dias: "Gerar primeiro rendimento extra estável",
+      },
+      perfilRecomendado: "Comunicador", estruturasRecomendadas: ["Vendas online", "Marketing de afiliados"], demo: true,
+    },
+  ];
+
+  const payments = [
+    { id: "PG0001", influencerId: "INF0001", commissionIds: ["CM0003"], valor: 4950, periodo: `${daysAgo(30)} a ${todayISO()}`, metodo: "Transferência", conta: "IBAN AO06 **** 1234", data: daysAgo(10), referencia: "PAG-0012", estado: "Pago", administrador: "Admin", observacoes: "", demo: true },
+  ];
+
+  const whatsapp = {
+    groupName: "Negócios Múltiplos — Grupo Oficial",
+    groupLink: "https://chat.whatsapp.com/exemplo",
+    description: "Grupo oficial para diagnóstico e acesso ao programa 12 Formas.",
+    pinnedMessage: "Indica o código do teu influencer para receberes atendimento prioritário.",
+    rules: "Sem spam. Sem partilha de links externos. Respeito entre membros.",
+    scriptWelcome: "Bem-vindo(a)! Indica o código do influencer que te trouxe até aqui.",
+    scriptRequestCode: "Para continuarmos, qual é o código do influencer? (ex: JOANA50)",
+    scriptConfirmation: "Recebido! O teu pagamento foi validado — parabéns, já tens acesso ao programa 🎉",
+    scriptFollowup: "Olá! Ainda tens interesse em avançar com o diagnóstico gratuito?",
+    scriptSocialProof: "Mais um resultado da nossa comunidade! 🎉 Parabéns a quem está a colocar em prática.",
+  };
+
+  const socialProofs = [
+    { id: "SP0001", clienteId: "CLI0003", influencerId: "INF0001", tipo: "Dia 30", texto: "Concluiu o desafio de 30 dias e já iniciou o primeiro fluxo de rendimento.", autorizado: true, estado: "Publicado", data: daysAgo(2), demo: true },
+    { id: "SP0002", clienteId: "CLI0001", influencerId: "INF0002", tipo: "Venda validada", texto: "Novo membro validado na comunidade via código CARLOS50.", autorizado: false, estado: "Aguardando autorização", data: daysAgo(5), demo: true },
+  ];
+
+  const vipMembers = [
+    { id: "VIP0001", nome: "Fernanda Bento", whatsapp: "+244 926 000 006", influencerId: "INF0001", dataEntrada: daysAgo(2), dataExpiracao: "", estado: "Activo", observacoes: "Concluiu os 30 dias com sucesso.", demo: true },
+  ];
+
+  const documents = [
+    { id: "DOC0001", titulo: "Termos de Parceria — Influencers", categoria: "Termos de parceria", link: "", nota: "Documento base assinado por todos os parceiros aprovados.", dataUpload: daysAgo(40), demo: true },
+    { id: "DOC0002", titulo: "Partner Kit — Criativos e Scripts", categoria: "Partner Kit", link: "", nota: "Pack de imagens e textos para Stories/Reels.", dataUpload: daysAgo(30), demo: true },
+  ];
+
+  const tasks = [
+    { id: "TSK0001", titulo: "Validar comprovativo da venda VD0004", descricao: "Confirmar referência com o banco antes de validar.", responsavel: "Admin", prioridade: "Alta", prazo: todayISO(), estado: "Pendente", entidade: "VD0004", demo: true },
+    { id: "TSK0002", titulo: "Follow-up com Rosa K", descricao: "Enviar materiais de onboarding.", responsavel: "Admin", prioridade: "Média", prazo: daysAgo(-2), estado: "Pendente", entidade: "INF0003", demo: true },
+    { id: "TSK0003", titulo: "Publicar prova social do Dia 30", descricao: "Aguardar autorização do cliente antes de publicar.", responsavel: "Admin", prioridade: "Baixa", prazo: daysAgo(-5), estado: "Pendente", entidade: "SP0001", demo: true },
+  ];
+
+  const auditLogs = [
+    { id: "AUD0001", data: new Date().toISOString(), utilizador: "Admin", accao: "Sistema inicializado com dados demo", entidade: "sistema", entidadeId: "-" },
+  ];
+
+  const settings = {
+    companyName: "Negócios Múltiplos", logoText: "NM", whatsappOficial: "+244 900 000 000",
+    email: "contacto@negociosmultiplos.ao", moeda: "Kz", duracaoAcompanhamento: 30,
+    mensagemPadrao: "Obrigado pelo teu interesse! Vamos agendar o teu diagnóstico gratuito.",
+  };
+
+  return {
+    seq: { INF: 3, LD: 5, CLI: 3, VD: 5, CM: 3, CMP: 1, SC: 5, DG: 1, PG: 1, SP: 2, VIP: 1, DOC: 2, TSK: 3, AUD: 1 },
+    campaigns, influencers, leads, clients, sales, commissions,
+    scripts, diagnostics, payments, whatsapp, socialProofs, vipMembers, documents, tasks, auditLogs, settings,
+  };
+}
+
+/* ======================================================================
+   PERSISTENCE HOOK
+====================================================================== */
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), ms)),
+  ]);
+}
+
+const CORE_TABLES = ["campaigns", "influencers", "leads", "clients", "sales", "commissions"];
+const CORE_SINGULAR = { campaigns: "campaign", influencers: "influencer", leads: "lead", clients: "client", sales: "sale", commissions: "commission" };
+const LOCAL_TABLES = ["scripts", "diagnostics", "vip_members", "documents", "tasks", "commission_payments"];
+const LOCAL_SINGULAR = { scripts: "script", diagnostics: "diagnostic", vip_members: "vip", documents: "document", tasks: "task", commission_payments: "payment" };
+const LOCAL_KEY = { scripts: "scripts", diagnostics: "diagnostics", vip_members: "vipMembers", documents: "documents", tasks: "tasks", commission_payments: "payments" };
+
+async function fetchAllData(accessToken) {
+  const corePromise = Promise.all(
+    CORE_TABLES.map((t) => sbTable(t, accessToken).list().then((rows) => (rows || []).map(mapIn[CORE_SINGULAR[t]])))
+  );
+  const localPromise = Promise.all(
+    LOCAL_TABLES.map((t) => sbTable(t, accessToken).list().then((rows) => (rows || []).map(mapIn[LOCAL_SINGULAR[t]])))
+  );
+  const [core, local, whatsappRows, settingsRows, paymentItemRows, auditRows] = await Promise.all([
+    corePromise,
+    localPromise,
+    sbFetch(`/rest/v1/whatsapp_groups?select=*&limit=1`, { accessToken }),
+    sbFetch(`/rest/v1/settings?select=*&limit=1`, { accessToken }),
+    sbFetch(`/rest/v1/commission_payment_items?select=*`, { accessToken }),
+    sbFetch(`/rest/v1/audit_logs?select=*&order=data.desc&limit=100`, { accessToken }),
+  ]);
+
+  const out = { campaigns: core[0], influencers: core[1], leads: core[2], clients: core[3], sales: core[4], commissions: core[5] };
+  LOCAL_TABLES.forEach((t, i) => { out[LOCAL_KEY[t]] = local[i]; });
+
+  // liga cada pagamento às suas comissões (tabela de junção)
+  out.payments = out.payments.map((p) => ({
+    ...p,
+    commissionIds: (paymentItemRows || []).filter((it) => it.payment_id === p.id).map((it) => it.commission_id),
+  }));
+
+  out.whatsapp = whatsappRows && whatsappRows[0] ? mapIn.whatsapp(whatsappRows[0]) : null;
+  out.settings = settingsRows && settingsRows[0] ? mapIn.settings(settingsRows[0]) : null;
+  out.auditLogs = (auditRows || []).map((r) => ({ id: r.id, data: r.data, utilizador: r.utilizador || "Admin", accao: r.accao, entidade: r.entidade, entidadeId: r.entidade_id }));
+
+  return out;
+}
+
+function useDB(accessToken) {
+  const [db, setDb] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saveError, setSaveError] = useState(false);
+  const [loadError, setLoadError] = useState(false);
+
+  const loadOnce = useCallback(async () => {
+    if (!accessToken) return;
+    setLoading(true);
+    setLoadError(false);
+    let base;
+    try {
+      const res = await withTimeout(window.storage.get(STORE_KEY, false), 6000);
+      base = res && res.value ? JSON.parse(res.value) : seedData();
+    } catch (e) {
+      base = seedData();
+    }
+    try {
+      const remote = await withTimeout(fetchAllData(accessToken), 12000);
+      // A Supabase é a fonte da verdade para todos os módulos já ligados — substitui os dados locais.
+      // whatsapp/settings ainda não têm linha na base de dados na primeira vez que a app corre.
+      setDb({
+        ...base, ...remote,
+        whatsapp: remote.whatsapp || base.whatsapp,
+        settings: remote.settings || base.settings,
+      });
+    } catch (e) {
+      // Sem ligação à base de dados real: continua com o que houver localmente para a app não ficar presa.
+      setDb(base);
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [accessToken]);
+
+  useEffect(() => { loadOnce(); }, [loadOnce]);
+
+  useEffect(() => {
+    if (!db || loading) return;
+    const t = setTimeout(async () => {
+      try {
+        const r = await withTimeout(window.storage.set(STORE_KEY, JSON.stringify(db), false), 6000);
+        setSaveError(!r);
+      } catch (e) {
+        setSaveError(true);
+      }
+    }, 250);
+    return () => clearTimeout(t);
+  }, [db, loading]);
+
+  return [db, setDb, loading, saveError, loadError, loadOnce];
+}
+
+/* ======================================================================
+   SMALL UI PRIMITIVES
+====================================================================== */
+function Pill({ children, tone = "neutral" }) {
+  const tones = {
+    neutral: { bg: "#F1F0EC", fg: C.ink },
+    green: { bg: C.greenTint, fg: C.green },
+    gold: { bg: "#FBF3DC", fg: "#8A6D14" },
+    red: { bg: C.redTint, fg: C.red },
+  };
+  const t = tones[tone] || tones.neutral;
+  return (
+    <span
+      style={{ background: t.bg, color: t.fg, ...fontBody }}
+      className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap"
+    >
+      {children}
+    </span>
+  );
+}
+
+const ESTADO_TONE = {
+  // influencers
+  Activo: "green", Onboarding: "gold", Pausado: "neutral", Suspenso: "red", Encerrado: "red",
+  Prospect: "neutral", Contactado: "neutral", Respondeu: "gold", Interessado: "gold", "Em negociação": "gold", Aprovado: "green",
+  // leads
+  Novo: "neutral", Diagnóstico: "gold", "Oferta apresentada": "gold", "Pagamento solicitado": "gold", Pago: "green",
+  "Não interessado": "red", "Follow-up": "gold", Perdido: "red", Convertido: "green",
+  // clients
+  "Em acompanhamento": "gold", Concluído: "green", Reembolsado: "red",
+  // sales
+  Pendente: "neutral", "Comprovativo recebido": "gold", "Em validação": "gold", Validada: "green", Cancelada: "red",
+  // commissions
+  Gerada: "gold", Disponível: "green", Solicitada: "gold", Paga: "green",
+  // campaigns
+  Activa: "green", Terminada: "neutral",
+};
+
+function StatusPill({ status }) {
+  return <Pill tone={ESTADO_TONE[status] || "neutral"}>{status}</Pill>;
+}
+
+function IconBtn({ icon: Icon, onClick, label, tone = "default" }) {
+  const toneStyle =
+    tone === "danger"
+      ? { color: C.red }
+      : tone === "brand"
+      ? { color: C.green }
+      : { color: C.muted };
+  return (
+    <button
+      onClick={onClick}
+      aria-label={label}
+      style={toneStyle}
+      className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-black/5 active:scale-95 transition"
+    >
+      <Icon size={17} />
+    </button>
+  );
+}
+
+function PrimaryButton({ children, onClick, icon: Icon, full, type = "button" }) {
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      style={{ background: C.green, ...fontBody }}
+      className={`text-white font-semibold text-sm px-4 py-3 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition shadow-sm ${full ? "w-full" : ""}`}
+    >
+      {Icon && <Icon size={16} />}
+      {children}
+    </button>
+  );
+}
+
+function GhostButton({ children, onClick, icon: Icon, full }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{ borderColor: C.line, color: C.ink, ...fontBody }}
+      className={`border text-sm font-medium px-4 py-3 rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition ${full ? "w-full" : ""}`}
+    >
+      {Icon && <Icon size={16} />}
+      {children}
+    </button>
+  );
+}
+
+function Field({ label, children, hint }) {
+  return (
+    <label className="block mb-4">
+      <span style={{ ...fontBody, color: C.ink }} className="block text-xs font-semibold mb-1.5 uppercase tracking-wide opacity-70">
+        {label}
+      </span>
+      {children}
+      {hint && <span className="block text-xs mt-1" style={{ color: C.muted }}>{hint}</span>}
+    </label>
+  );
+}
+
+const inputCls =
+  "w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none focus:ring-2 transition";
+const inputStyle = { borderColor: C.line, ...fontBody };
+
+function TextInput(props) {
+  return <input {...props} style={inputStyle} className={inputCls + " " + (props.className || "")} />;
+}
+function TextArea(props) {
+  return <textarea {...props} style={inputStyle} className={inputCls + " " + (props.className || "")} />;
+}
+function Select({ children, ...props }) {
+  return (
+    <select {...props} style={inputStyle} className={inputCls + " bg-white"}>
+      {children}
+    </select>
+  );
+}
+
+function EmptyState({ icon: Icon, title, subtitle, action }) {
+  return (
+    <div className="flex flex-col items-center justify-center text-center py-14 px-6">
+      <div style={{ background: C.greenTint, color: C.green }} className="w-14 h-14 rounded-2xl flex items-center justify-center mb-4">
+        <Icon size={24} />
+      </div>
+      <p style={{ ...fontBody, color: C.ink }} className="font-semibold mb-1">{title}</p>
+      <p style={{ ...fontBody, color: C.muted }} className="text-sm mb-5 max-w-xs">{subtitle}</p>
+      {action}
+    </div>
+  );
+}
+
+function ConfirmDialog({ open, title, body, confirmLabel = "Confirmar", danger, onConfirm, onCancel }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/40 p-4" onClick={onCancel}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: C.card, ...fontBody }}
+        className="w-full sm:max-w-sm rounded-2xl p-5 shadow-xl"
+      >
+        <p style={{ ...fontDisplay, color: C.ink }} className="text-lg font-semibold mb-2">{title}</p>
+        <p style={{ color: C.muted }} className="text-sm mb-5">{body}</p>
+        <div className="flex gap-2">
+          <GhostButton onClick={onCancel} full>Cancelar</GhostButton>
+          <button
+            onClick={onConfirm}
+            style={{ background: danger ? C.red : C.green }}
+            className="w-full text-white font-semibold text-sm px-4 py-3 rounded-xl active:scale-[0.98] transition"
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Toast({ message }) {
+  if (!message) return null;
+  return (
+    <div className="fixed bottom-24 sm:bottom-6 left-1/2 -translate-x-1/2 z-[70]">
+      <div style={{ background: C.ink, ...fontBody }} className="text-white text-sm font-medium px-4 py-2.5 rounded-full shadow-lg flex items-center gap-2">
+        <Check size={14} style={{ color: C.gold }} /> {message}
+      </div>
+    </div>
+  );
+}
+
+function Sheet({ open, onClose, title, children, subtitle }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex justify-end sm:items-center sm:justify-center bg-black/40">
+      <div
+        style={{ background: C.paper }}
+        className="w-full sm:max-w-lg sm:rounded-2xl sm:max-h-[88vh] h-full sm:h-auto overflow-y-auto animate-[slideIn_.2s_ease-out]"
+      >
+        <div style={{ background: C.paper, borderColor: C.line }} className="sticky top-0 border-b px-5 py-4 flex items-center justify-between z-10">
+          <div>
+            <p style={{ ...fontDisplay, color: C.ink }} className="text-lg font-semibold leading-tight">{title}</p>
+            {subtitle && <p style={{ color: C.muted, ...fontBody }} className="text-xs mt-0.5">{subtitle}</p>}
+          </div>
+          <IconBtn icon={X} onClick={onClose} label="Fechar" />
+        </div>
+        <div className="p-5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function SectionCard({ title, right, children }) {
+  return (
+    <div style={{ background: C.card, borderColor: C.line }} className="rounded-2xl border p-4 sm:p-5 mb-4">
+      {title && (
+        <div className="flex items-center justify-between mb-3">
+          <p style={{ ...fontDisplay, color: C.ink }} className="font-semibold text-base">{title}</p>
+          {right}
+        </div>
+      )}
+      {children}
+    </div>
+  );
+}
+
+/* ======================================================================
+   MASKED / SENSITIVE VALUE
+====================================================================== */
+function MaskedValue({ value, revealed }) {
+  if (revealed) return <span>{value}</span>;
+  const tail = (value || "").slice(-4);
+  return <span className="tracking-wider">**** **** {tail}</span>;
+}
+
+/* ======================================================================
+   APP SHELL
+====================================================================== */
+const NAV = [
+  { key: "dashboard", label: "Dashboard", icon: Home },
+  { key: "influencers", label: "Influencers", icon: Users },
+  { key: "prospeccao", label: "Prospecção", icon: Radar },
+  { key: "leads", label: "Leads", icon: Target },
+  { key: "diagnosticos", label: "Diagnósticos", icon: Stethoscope },
+  { key: "clientes", label: "Clientes", icon: UserCheck },
+  { key: "vendas", label: "Vendas", icon: CircleDollarSign },
+  { key: "comissoes", label: "Comissões", icon: Wallet },
+  { key: "pagamentos", label: "Pagamentos", icon: Landmark },
+  { key: "campanhas", label: "Campanhas", icon: Megaphone },
+  { key: "codigos", label: "Códigos", icon: KeyRound },
+  { key: "whatsapp", label: "WhatsApp", icon: MessageCircle },
+  { key: "scripts", label: "Scripts", icon: FileText },
+  { key: "ranking", label: "Ranking", icon: Trophy },
+  { key: "desafio30", label: "Desafio 30 Dias", icon: Rocket },
+  { key: "vip", label: "Comunidade VIP", icon: Star },
+  { key: "documentos", label: "Documentos", icon: FolderOpen },
+  { key: "tarefas", label: "Tarefas", icon: ListChecks },
+  { key: "relatorios", label: "Relatório Executivo", icon: BarChart3 },
+  { key: "notificacoes", label: "Notificações", icon: Bell },
+  { key: "auditoria", label: "Auditoria", icon: History },
+  { key: "areaInfluencer", label: "Minha Área (preview)", icon: UserCircle },
+  { key: "configuracoes", label: "Configurações", icon: Settings },
+];
+const BOTTOM_NAV_KEYS = ["dashboard", "vendas", "influencers", "leads"];
+
+/* ======================================================================
+   ERROR BOUNDARY — nunca deixa a app ficar num ecrã em branco/preso
+====================================================================== */
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ background: C.paper, ...fontBody }} className="min-h-screen flex items-center justify-center p-6">
+          <div style={{ background: C.card, borderColor: C.line }} className="border rounded-2xl p-6 max-w-sm w-full text-center">
+            <div style={{ background: C.redTint }} className="w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle size={22} style={{ color: C.red }} />
+            </div>
+            <p style={{ ...fontDisplay, color: C.ink }} className="font-semibold mb-1">Algo correu mal</p>
+            <p style={{ color: C.muted }} className="text-sm mb-5">A aplicação encontrou um erro inesperado. Os teus dados guardados não foram perdidos.</p>
+            <PrimaryButton full icon={RefreshCw} onClick={() => { this.setState({ error: null }); }}>Tentar novamente</PrimaryButton>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+function AppInner() {
+  useBrandFonts();
+  const [session, setSession] = useState(null); // { accessToken, email }
+  const [db, setDb, loading, saveError, loadError, reloadDb] = useDB(session?.accessToken);
+  const [view, setView] = useState("dashboard");
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [toast, setToast] = useState("");
+  const [globalSearchOpen, setGlobalSearchOpen] = useState(false);
+
+  const seqRef = React.useRef({ SC: 0, DG: 0, PG: 0, SP: 0, VIP: 0, DOC: 0, TSK: 0, AUD: 0 });
+  useEffect(() => {
+    if (db) seqRef.current = { ...seqRef.current, ...db.seq };
+  }, [db === null]);
+
+  const flash = useCallback((msg) => {
+    setToast(msg);
+    const t = setTimeout(() => setToast(""), 2200);
+    return () => clearTimeout(t);
+  }, []);
+
+  const persistSeq = useCallback(() => {
+    setDb((prev) => ({ ...prev, seq: { ...seqRef.current } }));
+  }, [setDb]);
+
+  if (!session) {
+    return <LoginGate onLogin={(s) => setSession(s)} />;
+  }
+
+  if (loading || !db) {
+    return (
+      <div style={{ background: C.paper }} className="min-h-screen flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div style={{ borderColor: C.gold }} className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" />
+          <p style={{ ...fontBody, color: C.muted }} className="text-sm">A carregar dados…</p>
+        </div>
+      </div>
+    );
+  }
+  const ctx = { db, setDb, seqRef, persistSeq, flash, accessToken: session.accessToken, userId: session.userId };
+
+  const viewMap = {
+    dashboard: <Dashboard {...ctx} />,
+    influencers: <InfluencersView {...ctx} />,
+    prospeccao: <ProspeccaoView {...ctx} setView={setView} />,
+    leads: <LeadsView {...ctx} />,
+    diagnosticos: <DiagnosticosView {...ctx} />,
+    clientes: <ClientesView {...ctx} />,
+    vendas: <VendasView {...ctx} />,
+    comissoes: <ComissoesView {...ctx} />,
+    pagamentos: <PagamentosView {...ctx} />,
+    campanhas: <CampanhasView {...ctx} />,
+    codigos: <CodigosView {...ctx} />,
+    whatsapp: <WhatsAppView {...ctx} />,
+    scripts: <ScriptsView {...ctx} />,
+    ranking: <RankingView {...ctx} />,
+    desafio30: <Desafio30View {...ctx} />,
+    vip: <VipView {...ctx} />,
+    documentos: <DocumentosView {...ctx} />,
+    tarefas: <TarefasView {...ctx} />,
+    relatorios: <RelatorioExecutivoView {...ctx} />,
+    notificacoes: <NotificacoesView {...ctx} setView={setView} />,
+    auditoria: <AuditoriaView {...ctx} />,
+    areaInfluencer: <AreaInfluencerView {...ctx} />,
+    configuracoes: <ConfiguracoesView {...ctx} />,
+  };
+
+  return (
+    <div style={{ background: C.paper, minHeight: "100vh", ...fontBody }} className="pb-24 sm:pb-8">
+      <TopBar
+        onMenu={() => setMenuOpen(true)}
+        onSearch={() => setGlobalSearchOpen(true)}
+        title={NAV.find((n) => n.key === view)?.label || ""}
+        saveError={saveError}
+      />
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 pt-4">
+        {loadError && (
+          <div style={{ background: "#FBF3DC", color: "#8A6D14" }} className="rounded-xl p-3 flex items-center justify-between gap-2 mb-4 text-xs font-semibold">
+            <span className="flex items-center gap-2"><AlertTriangle size={14} /> Não foi possível carregar os dados guardados — a começar com dados demo.</span>
+            <button onClick={reloadDb} className="underline shrink-0">Tentar de novo</button>
+          </div>
+        )}
+        {viewMap[view]}
+      </div>
+      <BottomNav view={view} setView={setView} onMore={() => setMenuOpen(true)} />
+      <SideMenu open={menuOpen} onClose={() => setMenuOpen(false)} view={view} setView={setView} />
+      <GlobalSearch open={globalSearchOpen} onClose={() => setGlobalSearchOpen(false)} db={db} setView={setView} />
+      <Toast message={toast} />
+      <style>{`
+        @keyframes slideIn { from { transform: translateY(12px); opacity:0 } to { transform: translateY(0); opacity:1 } }
+      `}</style>
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppInner />
+    </ErrorBoundary>
+  );
+}
+
+function TestConnectionButton() {
+  const [state, setState] = useState("idle"); // idle | testing | ok | fail
+  const [detail, setDetail] = useState("");
+
+  const test = async () => {
+    setState("testing");
+    setDetail("");
+    try {
+      const res = await withTimeout(
+        fetch(`${SUPABASE_URL}/rest/v1/`, { headers: { apikey: SUPABASE_ANON_KEY } }),
+        8000
+      );
+      if (res.ok || res.status === 404) {
+        setState("ok");
+      } else {
+        setState("fail");
+        setDetail(`HTTP ${res.status}`);
+      }
+    } catch (err) {
+      setState("fail");
+      setDetail(err.message === "timeout" ? "sem resposta em 8s" : (err.message || "erro de rede"));
+    }
+  };
+
+  return (
+    <div className="mt-3">
+      <button type="button" onClick={test} style={{ color: C.green, ...fontBody }} className="text-xs font-semibold underline">
+        {state === "testing" ? "A testar…" : "Testar ligação à base de dados"}
+      </button>
+      {state === "ok" && (
+        <p style={{ color: C.green, ...fontBody }} className="text-xs mt-1.5 font-semibold flex items-center gap-1"><Check size={12} /> Ligação à base de dados OK — o problema deve ser email/password.</p>
+      )}
+      {state === "fail" && (
+        <p style={{ color: C.red, ...fontBody }} className="text-xs mt-1.5 font-semibold">Falha de ligação ({detail}) — esta pré-visualização pode estar a bloquear pedidos de rede externos.</p>
+      )}
+    </div>
+  );
+}
+
+function LoginGate({ onLogin }) {
+  useBrandFonts();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const inFlight = React.useRef(false);
+
+  const submit = async (e) => {
+    if (e && e.preventDefault) e.preventDefault();
+    if (inFlight.current) return; // evita disparo duplicado se o botão for tocado duas vezes
+    inFlight.current = true;
+    setError("");
+    setBusy(true);
+    try {
+      const data = await withTimeout(sbLogin(email.trim(), password), 10000);
+      if (!data || !data.access_token) throw new Error(data?.error_description || data?.msg || "Credenciais inválidas");
+      onLogin({ accessToken: data.access_token, email: data.user?.email || email, userId: data.user?.id });
+    } catch (err) {
+      const raw = err && err.message ? err.message : String(err);
+      const friendly =
+        raw === "timeout" ? "O pedido demorou demasiado — verifica a tua ligação e tenta de novo."
+        : raw === "Failed to fetch" || raw.includes("NetworkError") ? "Não foi possível ligar à base de dados (falha de rede nesta pré-visualização)."
+        : raw.toLowerCase().includes("invalid") ? "Email ou password incorrectos."
+        : `Erro: ${raw}`;
+      setError(friendly);
+    } finally {
+      setBusy(false);
+      inFlight.current = false;
+    }
+  };
+
+  return (
+    <div style={{ background: C.green, ...fontBody }} className="min-h-screen flex items-center justify-center p-6">
+      <div style={{ background: C.card }} className="w-full max-w-sm rounded-3xl p-7 shadow-2xl">
+        <div style={{ background: C.green }} className="w-14 h-14 rounded-2xl flex items-center justify-center mb-5">
+          <span style={{ ...fontDisplay, color: C.gold }} className="text-xl font-bold">NM</span>
+        </div>
+        <p style={{ ...fontDisplay, color: C.ink }} className="text-2xl font-semibold leading-tight">Negócios Múltiplos</p>
+        <p style={{ color: C.gold, ...fontBody }} className="text-xs font-bold uppercase tracking-[0.14em] mb-6">Influencer Partner OS</p>
+        <form onSubmit={submit}>
+          <Field label="Email">
+            <TextInput type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoFocus autoComplete="username" enterKeyHint="next" />
+          </Field>
+          <Field label="Password" hint={error || "Conta de administrador criada no Supabase."}>
+            <TextInput type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" enterKeyHint="go" />
+          </Field>
+          <PrimaryButton type="submit" full icon={busy ? RefreshCw : ShieldCheck} onClick={submit}>
+            {busy ? "A entrar…" : "Entrar"}
+          </PrimaryButton>
+        </form>
+        <TestConnectionButton />
+        <p style={{ color: C.muted }} className="text-xs mt-5 leading-relaxed">
+          Login real ligado à tua base de dados Supabase. A sessão fica activa só enquanto este ecrã estiver aberto — se saíres e voltares, precisas de entrar outra vez.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function TopBar({ onMenu, onSearch, title, saveError }) {
+  return (
+    <div style={{ background: C.green }} className="sticky top-0 z-40">
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <button onClick={onMenu} className="text-white w-9 h-9 -ml-1.5 rounded-full flex items-center justify-center hover:bg-white/10 active:scale-95 transition shrink-0">
+            <Menu size={20} />
+          </button>
+          <div className="min-w-0">
+            <p style={{ ...fontDisplay, color: "white" }} className="text-base font-semibold leading-none truncate">{title}</p>
+            <p style={{ color: C.gold }} className="text-[10px] font-bold tracking-[0.14em] uppercase mt-0.5">Negócios Múltiplos</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {saveError && (
+            <span style={{ background: "#fff3", color: "white" }} className="text-[10px] font-medium px-2 py-1 rounded-full mr-1">
+              Erro ao guardar
+            </span>
+          )}
+          <button onClick={onSearch} className="text-white w-9 h-9 rounded-full flex items-center justify-center hover:bg-white/10 active:scale-95 transition">
+            <Search size={18} />
+          </button>
+        </div>
+      </div>
+      <div style={{ background: C.gold, height: 3 }} />
+    </div>
+  );
+}
+
+function GlobalSearch({ open, onClose, db, setView }) {
+  const [q, setQ] = useState("");
+  if (!open) return null;
+  const query = q.trim().toLowerCase();
+  const results = [];
+  if (query) {
+    db.influencers.forEach((i) => {
+      if (i.nome.toLowerCase().includes(query) || (i.nomeArtistico || "").toLowerCase().includes(query) || (i.codigo || "").toLowerCase().includes(query) || i.telefone.includes(query))
+        results.push({ type: "Influencer", label: i.nomeArtistico || i.nome, sub: i.codigo, view: "influencers" });
+    });
+    db.leads.forEach((l) => { if (l.nome.toLowerCase().includes(query) || l.telefone.includes(query)) results.push({ type: "Lead", label: l.nome, sub: l.telefone, view: "leads" }); });
+    db.clients.forEach((c) => { if (c.nome.toLowerCase().includes(query) || c.telefone.includes(query)) results.push({ type: "Cliente", label: c.nome, sub: c.telefone, view: "clientes" }); });
+    db.sales.forEach((s) => { if ((s.referencia || "").toLowerCase().includes(query) || s.id.toLowerCase().includes(query)) results.push({ type: "Venda", label: s.id, sub: s.referencia, view: "vendas" }); });
+    db.campaigns.forEach((c) => { if (c.nome.toLowerCase().includes(query)) results.push({ type: "Campanha", label: c.nome, sub: c.codigoInterno, view: "campanhas" }); });
+  }
+  return (
+    <div className="fixed inset-0 z-[70] bg-black/40 flex items-start justify-center p-4 pt-16" onClick={onClose}>
+      <div onClick={(e) => e.stopPropagation()} style={{ background: C.card }} className="w-full max-w-md rounded-2xl shadow-xl overflow-hidden">
+        <div style={{ borderColor: C.line }} className="border-b p-3 flex items-center gap-2">
+          <Search size={16} style={{ color: C.muted }} />
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Pesquisar influencer, lead, cliente, venda, campanha…" style={fontBody} className="flex-1 outline-none text-sm bg-transparent" />
+          <button onClick={onClose}><X size={17} style={{ color: C.muted }} /></button>
+        </div>
+        <div className="max-h-80 overflow-y-auto">
+          {query && results.length === 0 && <p style={{ color: C.muted, ...fontBody }} className="text-sm text-center py-8">Sem resultados.</p>}
+          {results.map((r, idx) => (
+            <button
+              key={idx}
+              onClick={() => { setView(r.view); onClose(); }}
+              style={{ borderColor: C.line }}
+              className="w-full text-left px-4 py-3 border-b last:border-0 flex items-center justify-between hover:bg-black/[0.03]"
+            >
+              <div>
+                <p style={{ color: C.ink, ...fontBody }} className="text-sm font-semibold">{r.label}</p>
+                <p style={{ color: C.muted }} className="text-xs">{r.sub || "—"}</p>
+              </div>
+              <Pill>{r.type}</Pill>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BottomNav({ view, setView, onMore }) {
+  const items = NAV.filter((n) => BOTTOM_NAV_KEYS.includes(n.key));
+  return (
+    <div style={{ background: C.card, borderColor: C.line }} className="fixed bottom-0 left-0 right-0 border-t sm:hidden z-40">
+      <div className="flex items-stretch">
+        {items.map((it) => {
+          const active = view === it.key;
+          return (
+            <button
+              key={it.key}
+              onClick={() => setView(it.key)}
+              className="flex-1 flex flex-col items-center justify-center gap-1 py-2.5"
+            >
+              <it.icon size={19} style={{ color: active ? C.green : C.muted }} />
+              <span style={{ color: active ? C.green : C.muted, ...fontBody }} className="text-[10px] font-semibold">{it.label}</span>
+              {active && <span style={{ background: C.gold }} className="w-1 h-1 rounded-full" />}
+            </button>
+          );
+        })}
+        <button onClick={onMore} className="flex-1 flex flex-col items-center justify-center gap-1 py-2.5">
+          <Menu size={19} style={{ color: C.muted }} />
+          <span style={{ color: C.muted, ...fontBody }} className="text-[10px] font-semibold">Mais</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function SideMenu({ open, onClose, view, setView }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-50 flex bg-black/40" onClick={onClose}>
+      <div
+        onClick={(e) => e.stopPropagation()}
+        style={{ background: C.green }}
+        className="w-72 max-w-[82vw] h-full p-5 flex flex-col"
+      >
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <p style={{ ...fontDisplay, color: "white" }} className="text-lg font-semibold leading-none">Menu</p>
+            <p style={{ color: C.gold }} className="text-[10px] font-bold tracking-[0.14em] uppercase mt-1">Influencer Partner OS</p>
+          </div>
+          <button onClick={onClose} className="text-white w-9 h-9 rounded-full flex items-center justify-center hover:bg-white/10">
+            <X size={19} />
+          </button>
+        </div>
+        <div className="flex flex-col gap-1 overflow-y-auto">
+          {NAV.map((it) => {
+            const active = view === it.key;
+            return (
+              <button
+                key={it.key}
+                onClick={() => { setView(it.key); onClose(); }}
+                style={{ background: active ? "rgba(201,162,39,0.16)" : "transparent" }}
+                className="flex items-center gap-3 px-3 py-3 rounded-xl text-left"
+              >
+                <it.icon size={18} style={{ color: active ? C.gold : "rgba(255,255,255,0.75)" }} />
+                <span style={{ color: active ? C.gold : "rgba(255,255,255,0.9)", ...fontBody }} className="text-sm font-semibold">{it.label}</span>
+              </button>
+            );
+          })}
+        </div>
+        <p style={{ color: "rgba(255,255,255,0.4)" }} className="text-[11px] mt-auto pt-4">MVP · dados guardados neste dispositivo/conta</p>
+      </div>
+    </div>
+  );
+}
+
+/* ======================================================================
+   FILTER BAR (period)
+====================================================================== */
+const PERIODS = ["Hoje", "7 dias", "30 dias", "Este mês", "Tudo"];
+function withinPeriod(dateStr, period) {
+  if (!dateStr || period === "Tudo") return true;
+  const d = new Date(dateStr);
+  const now = new Date();
+  if (period === "Hoje") return dateStr === todayISO();
+  if (period === "7 dias") return d >= new Date(daysAgo(7));
+  if (period === "30 dias") return d >= new Date(daysAgo(30));
+  if (period === "Este mês") return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  return true;
+}
+
+function PeriodFilter({ value, onChange }) {
+  return (
+    <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar">
+      {PERIODS.map((p) => {
+        const active = value === p;
+        return (
+          <button
+            key={p}
+            onClick={() => onChange(p)}
+            style={{
+              background: active ? C.green : C.card,
+              color: active ? "white" : C.ink,
+              borderColor: C.line,
+            }}
+            className="border px-3 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap shrink-0"
+          >
+            {p}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ======================================================================
+   DASHBOARD
+====================================================================== */
+function Dashboard({ db }) {
+  const [period, setPeriod] = useState("30 dias");
+
+  const salesInPeriod = db.sales.filter((s) => withinPeriod(s.data, period));
+  const leadsInPeriod = db.leads.filter((l) => withinPeriod(l.dataEntrada, period));
+  const validated = salesInPeriod.filter((s) => s.estado === "Validada");
+  const receita = validated.reduce((sum, s) => sum + Number(s.preco), 0);
+
+  const commissionsRelevant = db.commissions.filter((c) =>
+    validated.some((s) => s.id === c.saleId) || withinPeriod(c.historico?.[0]?.data, period)
+  );
+  const comissoesGeradas = db.commissions.filter((c) => c.estado !== "Cancelada").reduce((s, c) => s + Number(c.valor), 0);
+  const comissoesPendentes = db.commissions.filter((c) => ["Gerada", "Disponível", "Solicitada"].includes(c.estado)).reduce((s, c) => s + Number(c.valor), 0);
+  const comissoesPagas = db.commissions.filter((c) => c.estado === "Paga").reduce((s, c) => s + Number(c.valor), 0);
+
+  const influencersActivos = db.influencers.filter((i) => i.estado === "Activo").length;
+  const clientesActivos = db.clients.filter((c) => c.estado === "Activo" || c.estado === "Em acompanhamento").length;
+  const clientesConcluidos = db.clients.filter((c) => c.estado === "Concluído").length;
+
+  const kpis = [
+    { label: "Influencers activos", value: influencersActivos, of: `${db.influencers.length} total`, icon: Users },
+    { label: "Leads no período", value: leadsInPeriod.length, of: `${db.leads.length} total`, icon: Target },
+    { label: "Vendas validadas", value: validated.length, of: `${salesInPeriod.length} no período`, icon: CircleDollarSign },
+    { label: "Receita bruta", value: formatKz(receita), icon: TrendingUp, big: true },
+    { label: "Comissões geradas", value: formatKz(comissoesGeradas), icon: Coins, big: true },
+    { label: "Comissões pendentes", value: formatKz(comissoesPendentes), icon: Wallet, big: true, tone: "gold" },
+    { label: "Comissões pagas", value: formatKz(comissoesPagas), icon: Check, big: true, tone: "green" },
+    { label: "Clientes em acompanhamento", value: clientesActivos, of: `${clientesConcluidos} concluíram`, icon: UserCheck },
+  ];
+
+  const salesByDay = useMemo(() => {
+    const days = Array.from({ length: 14 }).map((_, i) => daysAgo(13 - i));
+    return days.map((d) => ({
+      day: d.slice(5),
+      vendas: db.sales.filter((s) => s.data === d && s.estado === "Validada").length,
+    }));
+  }, [db.sales]);
+
+  const salesByInfluencer = useMemo(() => {
+    return db.influencers.map((inf) => ({
+      name: (inf.nomeArtistico || inf.nome).split(" ")[0],
+      vendas: db.sales.filter((s) => s.influencerId === inf.id && s.estado === "Validada").length,
+      comissao: db.commissions.filter((c) => c.influencerId === inf.id && c.estado !== "Cancelada").reduce((s, c) => s + Number(c.valor), 0),
+    }));
+  }, [db.influencers, db.sales, db.commissions]);
+
+  return (
+    <div className="pb-6">
+      <PeriodFilter value={period} onChange={setPeriod} />
+
+      <div className="grid grid-cols-2 gap-3 mt-4">
+        {kpis.map((k) => (
+          <div key={k.label} style={{ background: C.card, borderColor: C.line }} className="rounded-2xl border p-3.5">
+            <div className="flex items-center justify-between mb-2">
+              <div style={{ background: k.tone === "gold" ? "#FBF3DC" : k.tone === "green" ? C.greenTint : "#F1F0EC" }} className="w-8 h-8 rounded-lg flex items-center justify-center">
+                <k.icon size={15} style={{ color: k.tone === "gold" ? "#8A6D14" : C.green }} />
+              </div>
+            </div>
+            <p style={{ ...fontDisplay, color: C.ink }} className={`font-semibold leading-tight ${k.big ? "text-lg" : "text-2xl"}`}>{k.value}</p>
+            <p style={{ color: C.muted }} className="text-[11px] mt-1 leading-tight">{k.label}</p>
+            {k.of && <p style={{ color: C.muted }} className="text-[10px] opacity-70">{k.of}</p>}
+          </div>
+        ))}
+      </div>
+
+      <SectionCard title="Vendas validadas · últimos 14 dias">
+        <div style={{ height: 180 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={salesByDay}>
+              <CartesianGrid vertical={false} stroke={C.line} />
+              <XAxis dataKey="day" tick={{ fontSize: 10, fill: C.muted }} axisLine={false} tickLine={false} interval={2} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: C.muted }} axisLine={false} tickLine={false} width={22} />
+              <Tooltip contentStyle={{ borderRadius: 10, borderColor: C.line, fontSize: 12 }} />
+              <Bar dataKey="vendas" fill={C.green} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Vendas e comissão por influencer">
+        <div style={{ height: 200 }}>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={salesByInfluencer}>
+              <CartesianGrid vertical={false} stroke={C.line} />
+              <XAxis dataKey="name" tick={{ fontSize: 10, fill: C.muted }} axisLine={false} tickLine={false} />
+              <YAxis allowDecimals={false} tick={{ fontSize: 10, fill: C.muted }} axisLine={false} tickLine={false} width={22} />
+              <Tooltip contentStyle={{ borderRadius: 10, borderColor: C.line, fontSize: 12 }} formatter={(v, n) => (n === "comissao" ? formatKz(v) : v)} />
+              <Bar dataKey="vendas" fill={C.gold} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </SectionCard>
+    </div>
+  );
+}
+
+/* ======================================================================
+   SEARCH + LIST WRAPPER
+====================================================================== */
+function ListHeader({ query, setQuery, placeholder, onAdd, addLabel }) {
+  return (
+    <div className="flex items-center gap-2 mb-4">
+      <div style={{ background: C.card, borderColor: C.line }} className="flex-1 border rounded-xl flex items-center px-3 py-2.5">
+        <Search size={16} style={{ color: C.muted }} />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder={placeholder}
+          style={fontBody}
+          className="flex-1 bg-transparent outline-none text-sm ml-2"
+        />
+      </div>
+      <button onClick={onAdd} style={{ background: C.green }} aria-label={addLabel} className="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 active:scale-95 transition">
+        <Plus size={19} color="white" />
+      </button>
+    </div>
+  );
+}
+
+function ContactRow({ phone, whatsapp, email }) {
+  const waLink = whatsapp ? `https://wa.me/${whatsapp.replace(/[^\d]/g, "")}` : null;
+  return (
+    <div className="flex items-center gap-1.5 mt-2">
+      {phone && (
+        <a href={`tel:${phone}`} onClick={(e) => e.stopPropagation()} style={{ background: "#F1F0EC", color: C.ink }} className="w-8 h-8 rounded-full flex items-center justify-center">
+          <Phone size={13} />
+        </a>
+      )}
+      {waLink && (
+        <a href={waLink} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} style={{ background: C.greenTint, color: C.green }} className="w-8 h-8 rounded-full flex items-center justify-center">
+          <MessageCircle size={13} />
+        </a>
+      )}
+      {email && (
+        <a href={`mailto:${email}`} onClick={(e) => e.stopPropagation()} style={{ background: "#F1F0EC", color: C.ink }} className="w-8 h-8 rounded-full flex items-center justify-center">
+          <Mail size={13} />
+        </a>
+      )}
+    </div>
+  );
+}
+
+/* ======================================================================
+   INFLUENCERS
+====================================================================== */
+const INF_ESTADOS = ["Prospect", "Contactado", "Respondeu", "Interessado", "Em negociação", "Aprovado", "Onboarding", "Activo", "Pausado", "Suspenso", "Encerrado"];
+
+function emptyInfluencer() {
+  return {
+    nome: "", nomeArtistico: "", username: "", plataforma: "Instagram", telefone: "", whatsapp: "",
+    email: "", cidade: "", pais: "Angola", nicho: "", seguidores: "", engagement: "", estado: "Prospect",
+    dataEntrada: todayISO(), codigo: "", codigoAtivo: true, metaVendas: "", observacoes: "",
+    banco: "", titular: "", iban: "",
+  };
+}
+
+function InfluencersView({ db, setDb, seqRef, persistSeq, flash, accessToken }) {
+  const [query, setQuery] = useState("");
+  const [sheet, setSheet] = useState(null); // {mode:'new'|'edit', data}
+  const [detail, setDetail] = useState(null);
+  const [confirmDel, setConfirmDel] = useState(null);
+  const [revealSensitive, setRevealSensitive] = useState({});
+  const [busy, setBusy] = useState(false);
+  const api = sbTable("influencers", accessToken);
+
+  const list = db.influencers.filter((i) => {
+    const q = query.toLowerCase();
+    return !q || i.nome.toLowerCase().includes(q) || (i.nomeArtistico || "").toLowerCase().includes(q) || (i.codigo || "").toLowerCase().includes(q) || i.telefone.includes(q);
+  });
+
+  const bApi = bankingApi(accessToken);
+  const save = async (data) => {
+    setBusy(true);
+    try {
+      let influencerId = data.id;
+      if (data.id) {
+        const row = await api.update(data.id, mapOut.influencer(data));
+        const updated = mapIn.influencer(row);
+        setDb((prev) => ({ ...prev, influencers: prev.influencers.map((i) => (i.id === updated.id ? updated : i)) }));
+        flash("Influencer actualizado");
+      } else {
+        const codesActive = db.influencers.filter((i) => i.codigoAtivo).map((i) => i.codigo);
+        let codigo = data.codigo || randCode(data.nomeArtistico || data.nome);
+        while (codesActive.includes(codigo)) codigo = randCode(data.nomeArtistico || data.nome);
+        const payload = mapOut.influencer({ ...data, codigo, codigoAtivo: true });
+        const row = await api.insert(payload);
+        const created = mapIn.influencer(row);
+        influencerId = created.id;
+        setDb((prev) => ({ ...prev, influencers: [created, ...prev.influencers] }));
+        flash("Influencer criado");
+      }
+      // dados bancários gravam à parte, na tabela isolada influencer_banking
+      if (data.titular || data.banco || data.iban) {
+        try { await bApi.upsert(influencerId, data); } catch (e) { flash(`Influencer guardado, mas os dados bancários falharam: ${e.message}`); }
+      }
+      setSheet(null);
+    } catch (e) {
+      flash(`Erro ao guardar: ${e.message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const remove = async (id) => {
+    setBusy(true);
+    try {
+      await api.remove(id);
+      setDb((prev) => ({ ...prev, influencers: prev.influencers.filter((i) => i.id !== id) }));
+      try {
+        const logRow = await sbFetch(`/rest/v1/audit_logs`, {
+          method: "POST", accessToken, prefer: "return=representation",
+          body: { accao: `Influencer ${id} eliminado`, entidade: "influencer", entidade_id: id },
+        });
+        if (logRow?.[0]) {
+          const l = logRow[0];
+          setDb((prev) => ({ ...prev, auditLogs: [{ id: l.id, data: l.data, utilizador: "Admin", accao: l.accao, entidade: l.entidade, entidadeId: l.entidade_id }, ...prev.auditLogs] }));
+        }
+      } catch (e) { /* log é best-effort — não bloqueia a eliminação */ }
+      setConfirmDel(null);
+      setDetail(null);
+      flash("Influencer eliminado");
+    } catch (e) {
+      flash(`Erro ao eliminar: ${e.message}`);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const archive = async (inf) => {
+    try {
+      const row = await api.update(inf.id, { estado: "Encerrado" });
+      const updated = mapIn.influencer(row);
+      setDb((prev) => ({ ...prev, influencers: prev.influencers.map((i) => (i.id === inf.id ? updated : i)) }));
+      flash("Influencer arquivado");
+    } catch (e) {
+      flash(`Erro: ${e.message}`);
+    }
+  };
+
+  return (
+    <div className="pb-6">
+      <ListHeader query={query} setQuery={setQuery} placeholder="Procurar por nome, código, telefone…" onAdd={() => setSheet({ mode: "new", data: emptyInfluencer() })} addLabel="Novo influencer" />
+
+      {list.length === 0 ? (
+        <EmptyState icon={Users} title="Sem influencers" subtitle="Adiciona o primeiro parceiro para começar a acompanhar vendas e comissões." action={<PrimaryButton icon={Plus} onClick={() => setSheet({ mode: "new", data: emptyInfluencer() })}>Novo influencer</PrimaryButton>} />
+      ) : (
+        <div className="grid gap-3">
+          {list.map((inf) => {
+            const vendas = db.sales.filter((s) => s.influencerId === inf.id && s.estado === "Validada").length;
+            const comissao = db.commissions.filter((c) => c.influencerId === inf.id && c.estado !== "Cancelada").reduce((s, c) => s + Number(c.valor), 0);
+            return (
+              <div key={inf.id} onClick={() => setDetail(inf)} style={{ background: C.card, borderColor: C.line }} className="rounded-2xl border p-4 active:scale-[0.99] transition cursor-pointer">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p style={{ ...fontDisplay, color: C.ink }} className="font-semibold truncate">{inf.nomeArtistico || inf.nome}</p>
+                    <p style={{ color: C.muted }} className="text-xs truncate">{inf.username || inf.nome} · {inf.plataforma}</p>
+                  </div>
+                  <StatusPill status={inf.estado} />
+                </div>
+                <div className="flex items-center gap-4 mt-3 text-xs" style={{ color: C.muted }}>
+                  <span><b style={{ color: C.ink }}>{vendas}</b> vendas</span>
+                  <span><b style={{ color: C.ink }}>{formatKz(comissao)}</b> comissão</span>
+                  {inf.codigo && <Pill tone="gold">{inf.codigo}</Pill>}
+                </div>
+                <ContactRow phone={inf.telefone} whatsapp={inf.whatsapp} email={inf.email} />
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <Sheet open={!!sheet} onClose={() => setSheet(null)} title={sheet?.mode === "new" ? "Novo influencer" : "Editar influencer"}>
+        {sheet && <InfluencerForm data={sheet.data} accessToken={accessToken} onCancel={() => setSheet(null)} onSave={save} />}
+      </Sheet>
+
+      <Sheet open={!!detail} onClose={() => setDetail(null)} title={detail?.nomeArtistico || detail?.nome} subtitle={detail?.codigo}>
+        {detail && (
+          <InfluencerDetail
+            inf={detail}
+            db={db}
+            accessToken={accessToken}
+            revealed={!!revealSensitive[detail.id]}
+            onToggleReveal={() => setRevealSensitive((r) => ({ ...r, [detail.id]: !r[detail.id] }))}
+            onEdit={() => { setSheet({ mode: "edit", data: detail }); }}
+            onArchive={() => archive(detail)}
+            onDelete={() => setConfirmDel(detail)}
+          />
+        )}
+      </Sheet>
+
+      <ConfirmDialog
+        open={!!confirmDel}
+        title="Eliminar influencer?"
+        body="Esta operação poderá afectar leads, vendas e comissões relacionadas. Considera arquivar em vez de eliminar."
+        confirmLabel="Eliminar"
+        danger
+        onCancel={() => setConfirmDel(null)}
+        onConfirm={() => confirmDel && remove(confirmDel.id)}
+      />
+    </div>
+  );
+}
+
+function InfluencerForm({ data, accessToken, onCancel, onSave }) {
+  const [form, setForm] = useState(data);
+  const [loadingBank, setLoadingBank] = useState(!!data.id);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  useEffect(() => {
+    if (!data.id) return;
+    bankingApi(accessToken).get(data.id)
+      .then((b) => setForm((f) => ({ ...f, titular: b.titular, banco: b.banco, iban: b.iban })))
+      .catch(() => {})
+      .finally(() => setLoadingBank(false));
+  }, [data.id]);
+
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); onSave(form); }}>
+      <p style={{ color: C.gold, ...fontBody }} className="text-xs font-bold uppercase tracking-wide mb-3">Dados pessoais</p>
+      <Field label="Nome completo"><TextInput required value={form.nome} onChange={set("nome")} /></Field>
+      <Field label="Nome artístico"><TextInput value={form.nomeArtistico} onChange={set("nomeArtistico")} /></Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Telefone"><TextInput required value={form.telefone} onChange={set("telefone")} /></Field>
+        <Field label="WhatsApp"><TextInput value={form.whatsapp} onChange={set("whatsapp")} /></Field>
+      </div>
+      <Field label="Email"><TextInput type="email" value={form.email} onChange={set("email")} /></Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Cidade"><TextInput value={form.cidade} onChange={set("cidade")} /></Field>
+        <Field label="País"><TextInput value={form.pais} onChange={set("pais")} /></Field>
+      </div>
+
+      <p style={{ color: C.gold, ...fontBody }} className="text-xs font-bold uppercase tracking-wide mb-3 mt-2">Dados profissionais</p>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Plataforma principal">
+          <Select value={form.plataforma} onChange={set("plataforma")}>
+            {["Instagram", "TikTok", "Facebook", "YouTube", "WhatsApp", "LinkedIn"].map((p) => <option key={p}>{p}</option>)}
+          </Select>
+        </Field>
+        <Field label="Username"><TextInput value={form.username} onChange={set("username")} /></Field>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Seguidores"><TextInput type="number" value={form.seguidores} onChange={set("seguidores")} /></Field>
+        <Field label="Engagement"><TextInput value={form.engagement} onChange={set("engagement")} placeholder="ex: 4.2%" /></Field>
+      </div>
+      <Field label="Nicho"><TextInput value={form.nicho} onChange={set("nicho")} /></Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Estado">
+          <Select value={form.estado} onChange={set("estado")}>
+            {INF_ESTADOS.map((s) => <option key={s}>{s}</option>)}
+          </Select>
+        </Field>
+        <Field label="Meta de vendas"><TextInput type="number" value={form.metaVendas} onChange={set("metaVendas")} /></Field>
+      </div>
+      <Field label="Observações"><TextArea rows={3} value={form.observacoes} onChange={set("observacoes")} /></Field>
+
+      <p style={{ color: C.gold, ...fontBody }} className="text-xs font-bold uppercase tracking-wide mb-3 mt-2">Dados financeiros (sensível) {loadingBank && "· a carregar…"}</p>
+      <Field label="Titular da conta"><TextInput value={form.titular} onChange={set("titular")} /></Field>
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Banco"><TextInput value={form.banco} onChange={set("banco")} /></Field>
+        <Field label="IBAN"><TextInput value={form.iban} onChange={set("iban")} /></Field>
+      </div>
+
+      <div className="flex gap-2 mt-4 sticky bottom-0 pt-2" style={{ background: C.paper }}>
+        <GhostButton onClick={onCancel} full>Cancelar</GhostButton>
+        <PrimaryButton type="submit" full icon={Check}>Guardar</PrimaryButton>
+      </div>
+    </form>
+  );
+}
+
+function InfluencerDetail({ inf, db, accessToken, revealed, onToggleReveal, onEdit, onArchive, onDelete }) {
+  const vendas = db.sales.filter((s) => s.influencerId === inf.id);
+  const validadas = vendas.filter((s) => s.estado === "Validada");
+  const leads = db.leads.filter((l) => l.influencerId === inf.id);
+  const comissaoTotal = db.commissions.filter((c) => c.influencerId === inf.id && c.estado !== "Cancelada").reduce((s, c) => s + Number(c.valor), 0);
+  const conversao = leads.length ? Math.round((validadas.length / leads.length) * 100) : 0;
+  const [banking, setBanking] = useState(null);
+  useEffect(() => {
+    bankingApi(accessToken).get(inf.id).then(setBanking).catch(() => setBanking({ titular: "", banco: "", iban: "" }));
+  }, [inf.id]);
+
+  return (
+    <div>
+      <StatusPill status={inf.estado} />
+      <div className="grid grid-cols-3 gap-2 mt-4">
+        <div style={{ background: C.greenTint }} className="rounded-xl p-3 text-center">
+          <p style={{ ...fontDisplay, color: C.green }} className="text-lg font-bold">{leads.length}</p>
+          <p style={{ color: C.green }} className="text-[10px] font-semibold">Leads</p>
+        </div>
+        <div style={{ background: C.greenTint }} className="rounded-xl p-3 text-center">
+          <p style={{ ...fontDisplay, color: C.green }} className="text-lg font-bold">{validadas.length}</p>
+          <p style={{ color: C.green }} className="text-[10px] font-semibold">Vendas</p>
+        </div>
+        <div style={{ background: "#FBF3DC" }} className="rounded-xl p-3 text-center">
+          <p style={{ ...fontDisplay, color: "#8A6D14" }} className="text-lg font-bold">{conversao}%</p>
+          <p style={{ color: "#8A6D14" }} className="text-[10px] font-semibold">Conversão</p>
+        </div>
+      </div>
+
+      <SectionCard title="Código de referência">
+        <div className="flex items-center justify-between">
+          <Pill tone="gold">{inf.codigo}</Pill>
+          <button onClick={() => navigator.clipboard?.writeText(inf.codigo)} className="text-xs font-semibold flex items-center gap-1" style={{ color: C.green }}>
+            <Copy size={13} /> Copiar
+          </button>
+        </div>
+      </SectionCard>
+
+      <SectionCard title="Comissão acumulada">
+        <p style={{ ...fontDisplay, color: C.ink }} className="text-2xl font-bold">{formatKz(comissaoTotal)}</p>
+      </SectionCard>
+
+      <SectionCard
+        title="Dados financeiros"
+        right={
+          <button onClick={onToggleReveal} className="text-xs font-semibold flex items-center gap-1" style={{ color: C.green }}>
+            {revealed ? <EyeOff size={13} /> : <Eye size={13} />} {revealed ? "Ocultar" : "Mostrar"}
+          </button>
+        }
+      >
+        <div className="text-sm space-y-1.5" style={{ color: C.ink }}>
+          {!banking ? (
+            <p style={{ color: C.muted }}>A carregar…</p>
+          ) : (
+            <>
+              <p><span style={{ color: C.muted }}>Titular:</span> {revealed ? (banking.titular || "—") : banking.titular ? "•••••••" : "—"}</p>
+              <p><span style={{ color: C.muted }}>Banco:</span> {banking.banco || "—"}</p>
+              <p><span style={{ color: C.muted }}>IBAN:</span> <MaskedValue value={banking.iban || "—"} revealed={revealed} /></p>
+            </>
+          )}
+        </div>
+      </SectionCard>
+
+      {inf.observacoes && (
+        <SectionCard title="Observações">
+          <p className="text-sm" style={{ color: C.ink }}>{inf.observacoes}</p>
+        </SectionCard>
+      )}
+
+      <div className="grid grid-cols-3 gap-2 mt-2">
+        <GhostButton icon={Pencil} onClick={onEdit}>Editar</GhostButton>
+        <GhostButton icon={Archive} onClick={onArchive}>Arquivar</GhostButton>
+        <button onClick={onDelete} style={{ borderColor: C.line, color: C.red }} className="border text-sm font-medium px-4 py-3 rounded-xl flex items-center justify-center gap-2">
+          <Trash2 size={16} /> Eliminar
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ======================================================================
+   LEADS
+====================================================================== */
+const LEAD_ESTADOS = ["Novo", "Contactado", "Diagnóstico", "Interessado", "Oferta apresentada", "Pagamento solicitado", "Pago", "Não interessado", "Follow-up", "Perdido", "Convertido"];
+
+function emptyLead(campaignId) {
+  return { nome: "", telefone: "", influencerId: "", campaignId: campaignId || "", estado: "Novo", dataEntrada: todayISO(), observacoes: "" };
+}
+
+function LeadsView({ db, setDb, seqRef, persistSeq, flash, accessToken }) {
+  const [query, setQuery] = useState("");
+  const [sheet, setSheet] = useState(null);
+  const [confirmDel, setConfirmDel] = useState(null);
+  const [confirmConvert, setConfirmConvert] = useState(null);
+  const api = sbTable("leads", accessToken);
+  const clientsApi = sbTable("clients", accessToken);
+
+  const list = db.leads.filter((l) => !query || l.nome.toLowerCase().includes(query.toLowerCase()) || l.telefone.includes(query));
+
+  const save = async (data) => {
+    try {
+      if (data.id) {
+        const row = await api.update(data.id, mapOut.lead(data));
+        const updated = mapIn.lead(row);
+        setDb((prev) => ({ ...prev, leads: prev.leads.map((l) => (l.id === updated.id ? updated : l)) }));
+        flash("Lead actualizado");
+      } else {
+        const row = await api.insert(mapOut.lead(data));
+        const created = mapIn.lead(row);
+        setDb((prev) => ({ ...prev, leads: [created, ...prev.leads] }));
+        flash("Lead criado");
+      }
+      setSheet(null);
+    } catch (e) {
+      flash(`Erro ao guardar: ${e.message}`);
+    }
+  };
+
+  const remove = async (id) => {
+    try {
+      await api.remove(id);
+      setDb((prev) => ({ ...prev, leads: prev.leads.filter((l) => l.id !== id) }));
+      setConfirmDel(null);
+      flash("Lead eliminado");
+    } catch (e) {
+      flash(`Erro ao eliminar: ${e.message}`);
+    }
+  };
+
+  const convertToClient = async (lead) => {
+    const existing = db.clients.find((c) => c.telefone === lead.telefone);
+    if (existing) {
+      flash("Já existe um cliente com este telefone");
+      setConfirmConvert(null);
+      return;
+    }
+    try {
+      const clientPayload = mapOut.client({
+        nome: lead.nome, telefone: lead.telefone, influencerId: lead.influencerId, campaignId: lead.campaignId,
+        produtoAdquirido: "12 Formas de Gerar Rendimentos em Angola", dataCompra: todayISO(), valor: 0,
+        estado: "Activo", diaAcompanhamento: 0, observacoes: `Convertido a partir do lead ${lead.id}.`,
+      });
+      const clientRow = await clientsApi.insert(clientPayload);
+      const client = mapIn.client(clientRow);
+      const leadRow = await api.update(lead.id, { estado: "Convertido" });
+      const updatedLead = mapIn.lead(leadRow);
+      setDb((prev) => ({
+        ...prev,
+        clients: [client, ...prev.clients],
+        leads: prev.leads.map((l) => (l.id === lead.id ? updatedLead : l)),
+      }));
+      setConfirmConvert(null);
+      flash("Lead convertido em cliente");
+    } catch (e) {
+      flash(`Erro ao converter: ${e.message}`);
+    }
+  };
+
+  return (
+    <div className="pb-6">
+      <ListHeader query={query} setQuery={setQuery} placeholder="Procurar lead…" onAdd={() => setSheet({ mode: "new", data: emptyLead() })} addLabel="Novo lead" />
+
+      {list.length === 0 ? (
+        <EmptyState icon={Target} title="Sem leads" subtitle="Regista o primeiro contacto vindo do grupo de WhatsApp." action={<PrimaryButton icon={Plus} onClick={() => setSheet({ mode: "new", data: emptyLead() })}>Novo lead</PrimaryButton>} />
+      ) : (
+        <div className="grid gap-3">
+          {list.map((l) => {
+            const inf = db.influencers.find((i) => i.id === l.influencerId);
+            return (
+              <div key={l.id} style={{ background: C.card, borderColor: C.line }} className="rounded-2xl border p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p style={{ ...fontDisplay, color: C.ink }} className="font-semibold truncate">{l.nome}</p>
+                    <p style={{ color: C.muted }} className="text-xs truncate">{inf ? (inf.nomeArtistico || inf.nome) : "Sem influencer"} {inf?.codigo ? `· ${inf.codigo}` : ""}</p>
+                  </div>
+                  <StatusPill status={l.estado} />
+                </div>
+                <ContactRow phone={l.telefone} whatsapp={l.telefone} />
+                <div className="flex items-center gap-2 mt-3">
+                  <button onClick={() => setSheet({ mode: "edit", data: l })} className="text-xs font-semibold flex items-center gap-1" style={{ color: C.green }}><Pencil size={12} /> Editar</button>
+                  {l.estado !== "Convertido" && (
+                    <button onClick={() => setConfirmConvert(l)} className="text-xs font-semibold flex items-center gap-1" style={{ color: C.gold }}><ChevronRight size={12} /> Converter em cliente</button>
+                  )}
+                  <button onClick={() => setConfirmDel(l)} className="text-xs font-semibold flex items-center gap-1 ml-auto" style={{ color: C.red }}><Trash2 size={12} /></button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <Sheet open={!!sheet} onClose={() => setSheet(null)} title={sheet?.mode === "new" ? "Novo lead" : "Editar lead"}>
+        {sheet && <LeadForm data={sheet.data} db={db} onCancel={() => setSheet(null)} onSave={save} />}
+      </Sheet>
+
+      <ConfirmDialog open={!!confirmDel} title="Eliminar lead?" body="Esta acção não pode ser desfeita." confirmLabel="Eliminar" danger onCancel={() => setConfirmDel(null)} onConfirm={() => confirmDel && remove(confirmDel.id)} />
+      <ConfirmDialog open={!!confirmConvert} title="Converter lead em cliente?" body="Vai criar um novo registo de cliente associado a este lead." confirmLabel="Converter" onCancel={() => setConfirmConvert(null)} onConfirm={() => confirmConvert && convertToClient(confirmConvert)} />
+    </div>
+  );
+}
+
+function LeadForm({ data, db, onCancel, onSave }) {
+  const [form, setForm] = useState(data);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  return (
+    <form onSubmit={(e) => { e.preventDefault(); onSave(form); }}>
+      <Field label="Nome"><TextInput required value={form.nome} onChange={set("nome")} /></Field>
+      <Field label="Telefone / WhatsApp"><TextInput required value={form.telefone} onChange={set("telefone")} /></Field>
+      <Field label="Influencer de origem">
+        <Select value={form.influencerId} onChange={set("influencerId")}>
+          <option value="">Sem atribuição</option>
+          {db.influencers.map((i) => <option key={i.id} value={i.id}>{i.nomeArtistico || i.nome} ({i.codigo})</option>)}
+        </Select>
+      </Field>
+      <Field label="Campanha">
+        <Select value={form.campaignId} onChange={set("campaignId")}>
+          <option value="">—</option>
+          {db.campaigns.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+        </Select>
+      </Field>
+      <Field label="Estado">
+        <Select value={form.estado} onChange={set("estado")}>
+          {LEAD_ESTADOS.map((s) => <option key={s}>{s}</option>)}
+        </Select>
+      </Field>
+      <Field label="Observações"><TextArea rows={3} value={form.observacoes} onChange={set("observacoes")} /></Field>
+      <div className="flex gap-2 mt-2">
+        <GhostButton onClick={onCancel} full>Cancelar</GhostButton>
+        <PrimaryButton type="submit" full icon={Check}>Guardar</PrimaryButton>
+      </div>
+    </form>
+  );
+}
+
+/* ======================================================================
+   CLIENTES
+====================================================================== */
+const CLI_ESTADOS = ["Activo", "Em acompanhamento", "Concluído", "Pausado", "Reembolsado", "Encerrado"];
+
+function ClientesView({ db, setDb, seqRef, persistSeq, flash, accessToken }) {
+  const [query, setQuery] = useState("");
+  const [sheet, setSheet] = useState(null);
+  const [confirmDel, setConfirmDel] = useState(null);
+  const api = sbTable("clients", accessToken);
+
+  const list = db.clients.filter((c) => !query || c.nome.toLowerCase().includes(query.toLowerCase()) || c.telefone.includes(query));
+
+  const save = async (data) => {
+    try {
+      if (data.id) {
+        const row = await api.update(data.id, mapOut.client(data));
+        const updated = mapIn.client(row);
+        setDb((prev) => ({ ...prev, clients: prev.clients.map((c) => (c.id === updated.id ? updated : c)) }));
+        flash("Cliente actualizado");
+      } else {
+        const row = await api.insert(mapOut.client(data));
+        const created = mapIn.client(row);
+        setDb((prev) => ({ ...prev, clients: [created, ...prev.clients] }));
+        flash("Cliente criado");
+      }
+      setSheet(null);
+    } catch (e) {
+      flash(`Erro ao guardar: ${e.message}`);
+    }
+  };
+
+  const remove = async (id) => {
+    try {
+      await api.remove(id);
+      setDb((prev) => ({ ...prev, clients: prev.clients.filter((c) => c.id !== id) }));
+      setConfirmDel(null);
+      flash("Cliente eliminado");
+    } catch (e) {
+      flash(`Erro ao eliminar: ${e.message}`);
+    }
+  };
+
+  return (
+    <div className="pb-6">
+      <ListHeader query={query} setQuery={setQuery} placeholder="Procurar cliente…" onAdd={() => setSheet({ mode: "new", data: emptyClient() })} addLabel="Novo cliente" />
+      {list.length === 0 ? (
+        <EmptyState icon={UserCheck} title="Sem clientes" subtitle="Os clientes aparecem aqui após uma venda validada ou conversão de lead." action={<PrimaryButton icon={Plus} onClick={() => setSheet({ mode: "new", data: emptyClient() })}>Novo cliente</PrimaryButton>} />
+      ) : (
+        <div className="grid gap-3">
+          {list.map((c) => {
+            const inf = db.influencers.find((i) => i.id === c.influencerId);
+            return (
+              <div key={c.id} style={{ background: C.card, borderColor: C.line }} className="rounded-2xl border p-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p style={{ ...fontDisplay, color: C.ink }} className="font-semibold truncate">{c.nome}</p>
+                    <p style={{ color: C.muted }} className="text-xs truncate">via {inf ? (inf.nomeArtistico || inf.nome) : "—"} · {formatKz(c.valor)}</p>
+                  </div>
+                  <StatusPill status={c.estado} />
+                </div>
+                {c.estado === "Em acompanhamento" && (
+                  <div className="mt-2.5">
+                    <div className="flex items-center justify-between text-[11px] mb-1" style={{ color: C.muted }}>
+                      <span>Dia {c.diaAcompanhamento}/30</span>
+                      <span>{Math.round((c.diaAcompanhamento / 30) * 100)}%</span>
+                    </div>
+                    <div style={{ background: "#F1F0EC" }} className="h-1.5 rounded-full overflow-hidden">
+                      <div style={{ background: C.gold, width: `${Math.min(100, (c.diaAcompanhamento / 30) * 100)}%` }} className="h-full rounded-full" />
+                    </div>
+                  </div>
+                )}
+                <ContactRow phone={c.telefone} whatsapp={c.telefone} />
+                <div className="flex items-center gap-2 mt-3">
+                  <button onClick={() => setSheet({ mode: "edit", data: c })} className="text-xs font-semibold flex items-center gap-1" style={{ color: C.green }}><Pencil size={12} /> Editar</button>
+                  <button onClick={() => setConfirmDel(c)} className="text-xs font-semibold flex items-center gap-1 ml-auto" style={{ color: C.red }}><Trash2 size={12} /></button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <Sheet open={!!sheet} onClose={() => setSheet(null)} title={sheet?.mode === "new" ? "Novo cliente" : "Editar cliente"}>
+        {sheet && <ClientForm data={sheet.data} db={db} onCancel={() => setSheet(null)} onSave={save} />}
+      </Sheet>
+      <ConfirmDialog open={!!confirmDel} title="Eliminar cliente?" body="Esta operação poderá afectar vendas relacionadas." confirmLabel="Eliminar" danger onCancel={() => setConfirmDel(null)} onConfirm={() => confirmDel && remove(confirmDel.id)} />
+    </div>
+  );
+}
+
+function emptyClient() {
+  return { nome: "", telefone: "", influencerId: "", campaignId: "", produtoAdquirido: "12 Formas de Gerar Rendimentos em Angola", dataCompra: todayISO(), valor: "", estado: "Activo", diaAcompanhamento: 0, observacoes: "" };
+}
+
+function ClientForm({ data, db, onCancel, onSave
+
